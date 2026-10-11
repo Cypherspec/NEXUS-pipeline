@@ -11,9 +11,9 @@ def bagging_gain():
     """Single-model OOF vs bagged-test log loss per algorithm (needs the dev cache)."""
     import numpy as np
 
-    from benchmark.dev import DEV_DATASETS, N_OUTER, V1, member_path
-    from nexus.ensemble import log_loss_from_proba
-    from benchmark.methods import DISPLAY
+    from tabular_ensemble_benchmark.dev import DEV_DATASETS, N_OUTER, V1, member_path
+    from tabular_ensemble.ensemble import log_loss_from_proba
+    from tabular_ensemble_benchmark.methods import DISPLAY
 
     rows = []
     for n in V1:
@@ -36,18 +36,18 @@ def main():
     if cache.exists():
         bagging_gain().to_csv(ROOT / "results" / "dev_bagging_gain.csv")
     g = pd.read_csv(ROOT / "results" / "dev_bagging_gain.csv", index_col=0)
-    with open(ROOT / "paper" / "tables" / "bagging_gain.tex", "w") as fh:
+    with open(ROOT / "paper_tabular" / "tables" / "bagging_gain.tex", "w") as fh:
         fh.write("\\begin{tabular}{lrrrr}\n\\toprule\nAlgorithm & OOF LL & Bagged test LL & Gain (mean) & Datasets with gain\\\\\n\\midrule\n")
         for name, r in g.iterrows():
             fh.write(f"{name} & {r.oof:.3f} & {r.bagged_test:.3f} & {r.gain_mean:.1f}\\% & {int(r.gain_positive)}/16\\\\\n")
         fh.write("\\bottomrule\n\\end{tabular}\n")
-    with open(ROOT / "paper" / "tables" / "bagging_gain.md", "w") as fh:
+    with open(ROOT / "paper_tabular" / "tables" / "bagging_gain.md", "w") as fh:
         fh.write("| Algorithm | OOF log loss | Bagged test log loss | Mean gain | Datasets with gain |\n|---|---|---|---|---|\n")
         for name, r in g.iterrows():
             fh.write(f"| {name} | {r.oof:.3f} | {r.bagged_test:.3f} | {r.gain_mean:.1f}% | {int(r.gain_positive)}/16 |\n")
     df = pd.read_csv(ROOT / "results" / "dev_summary.csv", index_col=0)
     df = df.sort_values("dR2_pp", ascending=False)
-    out = ROOT / "paper" / "tables"
+    out = ROOT / "paper_tabular" / "tables"
     out.mkdir(parents=True, exist_ok=True)
     with open(out / "dev.md", "w") as fh:
         fh.write("| Candidate (vs. v1) | Mean rank | ΔR² (pp) | Mean rel. log loss | Median rel. log loss | Wins / 16 | Rel. error change |\n|---|---|---|---|---|---|---|\n")

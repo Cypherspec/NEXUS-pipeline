@@ -13,10 +13,10 @@ from sklearn.model_selection import KFold, StratifiedKFold
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import LabelEncoder
 
-from nexus.calibration import apply_temperature, fit_temperature
-from nexus.ensemble import greedy_ensemble_selection, mix
-from nexus.preprocessing import dense_view, split_columns, to_frame, tree_view
-from nexus.zoo import ModelSpec, resolve_zoo
+from tabular_ensemble.calibration import apply_temperature, fit_temperature
+from tabular_ensemble.ensemble import greedy_ensemble_selection, mix
+from tabular_ensemble.preprocessing import dense_view, split_columns, to_frame, tree_view
+from tabular_ensemble.zoo import ModelSpec, resolve_zoo
 
 
 class _LocalLabelModel:

@@ -2,7 +2,7 @@
 
 Runs in a separate environment that has autogluon.tabular installed:
 
-    /opt/sota/bin/python -m benchmark.run_autogluon --workers 4
+    /opt/sota/bin/python -m tabular_ensemble_benchmark.run_autogluon --workers 4
 
 Per fold, AutoGluon (presets="best_quality", 1 CPU, eval_metric="log_loss")
 gets a time limit equal to the wall-clock time NEXUS v2 needed to fit that
@@ -39,7 +39,7 @@ def run_fold(task_id: int, fold: int) -> str:
     from autogluon.tabular import TabularPredictor
     from sklearn.preprocessing import LabelEncoder
 
-    from benchmark.suite import load_task
+    from tabular_ensemble_benchmark.suite import load_task
 
     warnings.filterwarnings("ignore")
     tag = "" if BUDGET_SCALE == 1.0 else f"_x{BUDGET_SCALE:g}"

@@ -1,6 +1,6 @@
-"""Paper figures from results/ (run benchmark.analyze first).
+"""Paper figures from results/ (run tabular_ensemble_benchmark.analyze first).
 
-    python -m benchmark.figures
+    python -m tabular_ensemble_benchmark.figures
 """
 
 from __future__ import annotations
@@ -16,13 +16,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from benchmark.analyze import METRIC_NAMES, friedman_nemenyi, rank_matrix
-from benchmark.methods import DISPLAY, ENSEMBLE_SIZES, MAIN_METHODS
-from nexus.zoo import DEFAULT_ZOO
+from tabular_ensemble_benchmark.analyze import METRIC_NAMES, friedman_nemenyi, rank_matrix
+from tabular_ensemble_benchmark.methods import DISPLAY, ENSEMBLE_SIZES, MAIN_METHODS
+from tabular_ensemble.zoo import DEFAULT_ZOO
 
 ROOT = Path(__file__).resolve().parent.parent
 RES = ROOT / "results"
-FIG = ROOT / "paper" / "figures"
+FIG = ROOT / "paper_tabular" / "figures"
 
 # Reference palette (light mode). NEXUS is emphasised; baselines recede.
 BLUE, ORANGE, AQUA, YELLOW = "#2a78d6", "#eb6834", "#1baf7a", "#eda100"

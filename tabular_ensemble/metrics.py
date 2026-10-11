@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 from sklearn.metrics import balanced_accuracy_score, roc_auc_score
 
-from nexus.ensemble import log_loss_from_proba
+from tabular_ensemble.ensemble import log_loss_from_proba
 
 
 def expected_calibration_error(y, proba, n_bins: int = 15) -> float:

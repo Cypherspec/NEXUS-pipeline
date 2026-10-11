@@ -9,9 +9,9 @@ from __future__ import annotations
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 
-from nexus.calibration import apply_temperature, fit_temperature
-from nexus.ensemble import EPS, greedy_ensemble_selection, log_loss_from_proba, mix
-from nexus.zoo import ZOO_BY_NAME
+from tabular_ensemble.calibration import apply_temperature, fit_temperature
+from tabular_ensemble.ensemble import EPS, greedy_ensemble_selection, log_loss_from_proba, mix
+from tabular_ensemble.zoo import ZOO_BY_NAME
 
 DISPLAY = {
     "L2:lightgbm": "L2 LightGBM", "L2:logreg": "L2 logistic regression",

@@ -1,8 +1,8 @@
 """NEXUS: cross-validated ensemble selection for tabular classification."""
 
-from nexus.classifier import NexusClassifier
-from nexus.ensemble import greedy_ensemble_selection, mix
-from nexus.calibration import fit_temperature, apply_temperature
+from tabular_ensemble.classifier import NexusClassifier
+from tabular_ensemble.ensemble import greedy_ensemble_selection, mix
+from tabular_ensemble.calibration import fit_temperature, apply_temperature
 
 __all__ = [
     "NexusClassifier",

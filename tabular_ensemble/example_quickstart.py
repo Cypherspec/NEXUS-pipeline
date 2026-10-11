@@ -7,7 +7,7 @@ from sklearn.datasets import fetch_openml
 from sklearn.metrics import accuracy_score, log_loss, roc_auc_score
 from sklearn.model_selection import train_test_split
 
-from nexus import NexusClassifier
+from tabular_ensemble import NexusClassifier
 
 X, y = fetch_openml(data_id=31, return_X_y=True, as_frame=True, parser="auto")
 X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.25, stratify=y, random_state=0)

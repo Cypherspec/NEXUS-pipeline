@@ -102,7 +102,7 @@ def resolve_zoo(models) -> tuple[ModelSpec, ...]:
 # learning rate with early stopping); they are not tuned on the benchmark.
 
 def _es(library, **params):
-    from nexus.early_stopping import EarlyStoppedBoosting
+    from tabular_ensemble.early_stopping import EarlyStoppedBoosting
     return lambda seed: EarlyStoppedBoosting(library, params, random_state=seed)
 
 

@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from benchmark.analyze import bootstrap_ci, friedman_nemenyi, holm
+from tabular_ensemble_benchmark.analyze import bootstrap_ci, friedman_nemenyi, holm
 
 
 def test_holm_matches_reference():

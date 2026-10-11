@@ -8,10 +8,10 @@ from sklearn.base import clone
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import make_pipeline
 
-from nexus.classifier import _LocalLabelModel
-from nexus.ensemble import log_loss_from_proba
-from nexus.preprocessing import dense_view, split_columns, tree_view
-from nexus.zoo import DEFAULT_ZOO
+from tabular_ensemble.classifier import _LocalLabelModel
+from tabular_ensemble.ensemble import log_loss_from_proba
+from tabular_ensemble.preprocessing import dense_view, split_columns, tree_view
+from tabular_ensemble.zoo import DEFAULT_ZOO
 
 N_TUNING_CONFIGS = 20
 

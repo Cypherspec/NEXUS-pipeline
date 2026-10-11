@@ -4,7 +4,7 @@ All NEXUS v2 design decisions are made here, never on the CC18 test suite.
 Member predictions are cached per (dataset, fold, member), so ensembling
 strategies can be compared offline without refitting.
 
-    python -m benchmark.dev members --workers 2 --members lightgbm catboost_es ...
+    python -m tabular_ensemble_benchmark.dev members --workers 2 --members lightgbm catboost_es ...
 """
 
 from __future__ import annotations
@@ -61,9 +61,9 @@ def member_path(did, fold, name):
 
 def fit_member(did: int, fold: int, name: str) -> str:
     """Cross-fit one member on the outer-train part; store OOF + bagged test preds."""
-    from nexus.classifier import _fit_one, _make_folds
-    from nexus.preprocessing import dense_view, split_columns, tree_view
-    from nexus.zoo import ALL_SPECS
+    from tabular_ensemble.classifier import _fit_one, _make_folds
+    from tabular_ensemble.preprocessing import dense_view, split_columns, tree_view
+    from tabular_ensemble.zoo import ALL_SPECS
 
     warnings.filterwarnings("ignore")
     out = member_path(did, fold, name)

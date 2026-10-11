@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 from scipy.optimize import minimize_scalar
 
-from nexus.ensemble import EPS, log_loss_from_proba
+from tabular_ensemble.ensemble import EPS, log_loss_from_proba
 
 
 def apply_temperature(proba: np.ndarray, temperature: float) -> np.ndarray:

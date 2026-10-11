@@ -4,7 +4,7 @@ Each (task, fold) writes results/raw/<task_id>/fold<k>.npz holding every
 prediction needed to recompute all methods and ablations. Completed folds
 are skipped, so the run can be interrupted and resumed.
 
-    python -m benchmark.run --workers 4
+    python -m tabular_ensemble_benchmark.run --workers 4
 """
 
 from __future__ import annotations
@@ -34,8 +34,8 @@ def run_fold_v2(task_id: int, fold: int) -> str:
     """NEXUS v2 only; baselines are shared with the v1 run on identical splits."""
     from sklearn.preprocessing import LabelEncoder
 
-    from benchmark.suite import load_task
-    from nexus import NexusClassifier
+    from tabular_ensemble_benchmark.suite import load_task
+    from tabular_ensemble import NexusClassifier
 
     warnings.filterwarnings("ignore")
     out = RAW_V2 / str(task_id) / f"fold{fold}.npz"
@@ -73,10 +73,10 @@ def run_fold_v2(task_id: int, fold: int) -> str:
 def run_fold(task_id: int, fold: int) -> str:
     from sklearn.preprocessing import LabelEncoder
 
-    from benchmark.baselines import fit_single, fit_tuned_lightgbm
-    from benchmark.suite import load_task
-    from nexus import NexusClassifier
-    from nexus.zoo import DEFAULT_ZOO
+    from tabular_ensemble_benchmark.baselines import fit_single, fit_tuned_lightgbm
+    from tabular_ensemble_benchmark.suite import load_task
+    from tabular_ensemble import NexusClassifier
+    from tabular_ensemble.zoo import DEFAULT_ZOO
 
     warnings.filterwarnings("ignore")
     out = RAW / str(task_id) / f"fold{fold}.npz"
@@ -145,7 +145,7 @@ def main():
     if args.tasks:
         tasks = tasks[tasks.task_id.isin(args.tasks)]
     # Download everything up front in the parent so workers never race on cache.
-    from benchmark.suite import load_task
+    from tabular_ensemble_benchmark.suite import load_task
     for tid in tasks.task_id:
         load_task(int(tid))
     jobs = [(int(t), f) for t in tasks.task_id for f in range(args.folds)]

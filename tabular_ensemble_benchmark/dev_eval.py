@@ -1,6 +1,6 @@
 """Score candidate NEXUS designs on the development datasets from cached members.
 
-    python -m benchmark.dev_eval
+    python -m tabular_ensemble_benchmark.dev_eval
 """
 
 from __future__ import annotations
@@ -10,10 +10,10 @@ import sys
 import numpy as np
 import pandas as pd
 
-from benchmark.dev import DEV_DATASETS, N_OUTER, member_path
-from nexus.calibration import apply_temperature, fit_temperature
-from nexus.ensemble import greedy_ensemble_selection, log_loss_from_proba, mix
-from nexus.metrics import all_metrics
+from tabular_ensemble_benchmark.dev import DEV_DATASETS, N_OUTER, member_path
+from tabular_ensemble.calibration import apply_temperature, fit_temperature
+from tabular_ensemble.ensemble import greedy_ensemble_selection, log_loss_from_proba, mix
+from tabular_ensemble.metrics import all_metrics
 
 
 def greedy_temp(oof, test, y, n_iter=50):
@@ -23,14 +23,14 @@ def greedy_temp(oof, test, y, n_iter=50):
 
 
 def bagged_temp(oof, test, y):
-    from nexus.ensemble import bagged_greedy_selection
+    from tabular_ensemble.ensemble import bagged_greedy_selection
     w = bagged_greedy_selection(oof, y)
     t = fit_temperature(mix(oof, w), y)
     return apply_temperature(mix(test, w), t)
 
 
 def convex_temp(oof, test, y):
-    from nexus.ensemble import optimal_convex_weights
+    from tabular_ensemble.ensemble import optimal_convex_weights
     w = optimal_convex_weights(oof, y)
     t = fit_temperature(mix(oof, w), y)
     return apply_temperature(mix(test, w), t)
@@ -90,6 +90,6 @@ def summarize(df: pd.DataFrame, ref: str) -> pd.DataFrame:
 
 
 if __name__ == "__main__":
-    from benchmark.dev import V1
+    from tabular_ensemble_benchmark.dev import V1
     variants = {"v1": (V1, greedy_temp)}
     print(summarize(evaluate(variants), "v1").to_string())

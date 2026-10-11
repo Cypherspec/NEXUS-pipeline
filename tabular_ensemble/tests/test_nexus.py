@@ -3,9 +3,9 @@ import pandas as pd
 import pytest
 from sklearn.datasets import make_classification
 
-from nexus import NexusClassifier, apply_temperature, fit_temperature, greedy_ensemble_selection
-from nexus.ensemble import log_loss_from_proba
-from nexus.metrics import all_metrics, expected_calibration_error
+from tabular_ensemble import NexusClassifier, apply_temperature, fit_temperature, greedy_ensemble_selection
+from tabular_ensemble.ensemble import log_loss_from_proba
+from tabular_ensemble.metrics import all_metrics, expected_calibration_error
 
 FAST = ["lightgbm", "logreg", "knn"]
 
