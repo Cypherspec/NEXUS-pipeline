@@ -11,3 +11,4 @@ paper/*.log
 paper/*.out
 paper/*.bbl
 paper/*.blg
+results/run.log

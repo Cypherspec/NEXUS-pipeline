@@ -20,9 +20,11 @@ Following \citet{caruana2004ensemble}, we build a weighted average
 $\hat p_w=\sum_m w_m \hat p_m$ by forward selection with replacement: starting from
 an empty bag, for $T{=}50$ iterations we add the algorithm whose inclusion most
 reduces the OOF log loss of the running average, and set $w_m$ to the fraction of
-iterations in which $m$ was chosen. The weights lie on the simplex, are sparse,
-and are fit by a procedure that cannot overfit as easily as unconstrained
-stacking because each step only averages calibrated-scale probabilities.
+iterations in which $m$ was chosen. The weights lie on the simplex and are
+typically sparse; the constraint to convex combinations of probabilities is a
+strong regulariser compared with a learned meta-model
+\citep{caruana2006getting}, which we test directly against stacking in
+Section~\ref{sec:results}.
 
 \paragraph{3. Temperature calibration.}
 Averaging probabilistic predictions tends to under-disperse them. We fit a
