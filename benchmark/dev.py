@@ -85,16 +85,18 @@ def fit_member(did: int, fold: int, name: str) -> str:
         X_te = pd.concat([X_te, pd.DataFrame(te_l1, columns=cols)], axis=1)
         spec = ALL_SPECS[member]
     else:
-        spec = ALL_SPECS[name]
+        spec = ALL_SPECS[name.split("#")[0]]
+    # "<member>#r<j>": an independent repetition of cross-fitting with new fold seeds.
+    repeat = int(name.split("#r")[1]) if "#r" in name else 0
 
     numeric, categorical = split_columns(X_tr)
     view = tree_view(numeric, categorical) if spec.view == "tree" else dense_view(numeric, categorical)
-    inner = _make_folds(y_tr, N_INNER, seed=fold)
+    inner = _make_folds(y_tr, N_INNER, seed=fold + 1000 * repeat)
     oof = np.zeros((len(X_tr), k))
     test = np.zeros((len(X_te), k))
     t0 = time.perf_counter()
     for f, (a, b) in enumerate(inner):
-        model, pred, _ = _fit_one(spec, view, X_tr.iloc[a], y_tr[a], X_tr.iloc[b], k, fold * 100 + f)
+        model, pred, _ = _fit_one(spec, view, X_tr.iloc[a], y_tr[a], X_tr.iloc[b], k, fold * 100 + f + 1000 * repeat)
         oof[b] = pred
         test += model.predict_proba(X_te) / len(inner)
     secs = time.perf_counter() - t0

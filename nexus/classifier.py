@@ -81,16 +81,18 @@ class NexusClassifier(ClassifierMixin, BaseEstimator):
     ----------
     models : "default" or sequence of model names / ModelSpec
     n_folds : int, number of cross-fitting folds
+    n_repeats : int, independent repetitions of K-fold cross-fitting
     ensemble_size : int, greedy selection iterations
     calibrate : bool, apply temperature scaling to the mixture
     random_state : int
     n_jobs : int, parallel (model, fold) fits via joblib
     """
 
-    def __init__(self, models="default", n_folds=5, ensemble_size=50,
+    def __init__(self, models="default", n_folds=5, n_repeats=1, ensemble_size=50,
                  calibrate=True, random_state=0, n_jobs=1):
         self.models = models
         self.n_folds = n_folds
+        self.n_repeats = n_repeats
         self.ensemble_size = ensemble_size
         self.calibrate = calibrate
         self.random_state = random_state
@@ -107,9 +109,13 @@ class NexusClassifier(ClassifierMixin, BaseEstimator):
                  "dense": dense_view(numeric, categorical)}
         self.zoo_ = resolve_zoo(self.models)
 
-        folds = _make_folds(y_enc, self.n_folds, self.random_state)
-
-        jobs = [(spec, f, tr, va) for spec in self.zoo_ for f, (tr, va) in enumerate(folds)]
+        # Repetition r re-shuffles the folds; averaging a point's R out-of-fold
+        # predictions mimics the bagged predictor used at test time.
+        jobs = []
+        for r in range(self.n_repeats):
+            folds = _make_folds(y_enc, self.n_folds, self.random_state + 1000 * r)
+            jobs += [(spec, f + 1000 * r, tr, va) for spec in self.zoo_
+                     for f, (tr, va) in enumerate(folds)]
         results = Parallel(n_jobs=self.n_jobs)(
             delayed(_fit_one)(spec, views[spec.view], X.iloc[tr], y_enc[tr],
                               X.iloc[va], k, self.random_state + f)
@@ -123,7 +129,7 @@ class NexusClassifier(ClassifierMixin, BaseEstimator):
             report.fit_seconds[spec.name] = 0.0
         for (spec, _, _, va), (model, pred, secs) in zip(jobs, results):
             self.fold_models_[spec.name].append(model)
-            report.oof_proba[spec.name][va] = pred
+            report.oof_proba[spec.name][va] += pred / self.n_repeats
             report.fit_seconds[spec.name] += secs
 
         names = [s.name for s in self.zoo_]

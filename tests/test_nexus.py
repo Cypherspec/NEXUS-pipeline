@@ -98,3 +98,13 @@ def test_sklearn_clone_and_params():
     clf = NexusClassifier(models=FAST, n_folds=4, ensemble_size=10)
     c = clone(clf)
     assert c.get_params()["n_folds"] == 4
+
+
+def test_repeats_one_matches_v1_and_more_repeats_bag_more_models():
+    X, y = _data()
+    a = NexusClassifier(models=FAST, n_folds=3, random_state=1).fit(X, y)
+    b = NexusClassifier(models=FAST, n_folds=3, n_repeats=1, random_state=1).fit(X, y)
+    np.testing.assert_allclose(a.predict_proba(X), b.predict_proba(X))
+    c = NexusClassifier(models=FAST, n_folds=3, n_repeats=2, random_state=1).fit(X, y)
+    assert len(c.fold_models_["lightgbm"]) == 6
+    np.testing.assert_allclose(c.report_.oof_proba["lightgbm"].sum(1), 1.0, atol=1e-9)

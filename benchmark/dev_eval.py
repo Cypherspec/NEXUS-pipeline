@@ -37,10 +37,19 @@ def convex_temp(oof, test, y):
 
 
 def load(did, fold, names):
-    d = [np.load(member_path(did, fold, n)) for n in names]
-    return (np.stack([x["oof"] for x in d]).astype(np.float64),
-            np.stack([x["test"] for x in d]).astype(np.float64),
-            d[0]["y_train"].astype(int), d[0]["y_test"].astype(int))
+    """Member names may be "a+b+c": repetitions whose OOF and test preds are averaged.
+    "a|b+c" uses OOF from a only but averages test preds over a, b, c."""
+    oofs, tests, d0 = [], [], None
+    for n in names:
+        oof_names, _, extra = n.partition("|")
+        sel = oof_names.split("+")
+        allt = sel + (extra.split("+") if extra else [])
+        zs = {m: np.load(member_path(did, fold, m)) for m in dict.fromkeys(allt)}
+        d0 = d0 or zs[sel[0]]
+        oofs.append(np.mean([zs[m]["oof"] for m in sel], axis=0))
+        tests.append(np.mean([zs[m]["test"] for m in allt], axis=0))
+    return (np.stack(oofs).astype(np.float64), np.stack(tests).astype(np.float64),
+            d0["y_train"].astype(int), d0["y_test"].astype(int))
 
 
 def evaluate(variants: dict[str, tuple[list[str], callable]]) -> pd.DataFrame:
