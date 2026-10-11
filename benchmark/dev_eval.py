@@ -12,7 +12,7 @@ import pandas as pd
 
 from benchmark.dev import DEV_DATASETS, N_OUTER, member_path
 from nexus.calibration import apply_temperature, fit_temperature
-from nexus.ensemble import greedy_ensemble_selection, mix
+from nexus.ensemble import greedy_ensemble_selection, log_loss_from_proba, mix
 from nexus.metrics import all_metrics
 
 
@@ -61,7 +61,10 @@ def evaluate(variants: dict[str, tuple[list[str], callable]]) -> pd.DataFrame:
                     oof, test, y_tr, y_te = load(did, f, members)
                 except FileNotFoundError:
                     continue
-                rows.append({"did": did, "fold": f, "variant": name, **all_metrics(y_te, combine(oof, test, y_tr))})
+                prior = np.bincount(y_tr, minlength=oof.shape[2]) / len(y_tr)
+                h = log_loss_from_proba(y_te, np.tile(np.clip(prior, 1e-6, 1), (len(y_te), 1)))
+                rows.append({"did": did, "fold": f, "variant": name, "prior_ll": h,
+                             **all_metrics(y_te, combine(oof, test, y_tr))})
     return pd.DataFrame(rows)
 
 
@@ -69,13 +72,16 @@ def summarize(df: pd.DataFrame, ref: str) -> pd.DataFrame:
     # Only datasets where every variant has all folds.
     full = df.groupby(["did", "variant"]).fold.nunique().unstack()
     keep = full.index[(full == N_OUTER).all(axis=1)]
-    t = df[df.did.isin(keep)].groupby(["did", "variant"])[["log_loss", "accuracy", "roc_auc"]].mean()
+    t = df[df.did.isin(keep)].groupby(["did", "variant"])[["log_loss", "accuracy", "roc_auc", "prior_ll"]].mean()
     ll = t.log_loss.unstack()
+    h = t.prior_ll.unstack().iloc[:, 0]
     acc = t.accuracy.unstack()
     out = pd.DataFrame({
         "n_datasets": len(keep),
         "mean_rank_ll": ll.rank(axis=1).mean(),
         "rel_ll_vs_ref_%": 100 * ((ll[ref].to_numpy()[:, None] - ll) / ll[ref].to_numpy()[:, None]).mean(),
+        "median_rel_ll_%": 100 * ((ll[ref].to_numpy()[:, None] - ll) / ll[ref].to_numpy()[:, None]).median(),
+        "dR2_pp": 100 * ((ll[ref].to_numpy()[:, None] - ll) / h.to_numpy()[:, None]).mean(),
         "wins_ll_vs_ref": (ll.lt(ll[ref], axis=0)).sum(),
         "mean_acc": acc.mean(),
         "rel_err_vs_ref_%": 100 * (((1 - acc[ref]).to_numpy()[:, None] - (1 - acc)) / (1 - acc[ref]).clip(1e-9).to_numpy()[:, None]).mean(),

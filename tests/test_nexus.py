@@ -55,7 +55,7 @@ def test_ece_perfect_calibration_is_zero():
 @pytest.mark.parametrize("k", [2, 3])
 def test_fit_predict_numpy(k):
     X, y = _data(k=k)
-    clf = NexusClassifier(models=FAST, n_folds=3).fit(X[:240], y[:240])
+    clf = NexusClassifier(models=FAST, n_folds=3, stack_models=None).fit(X[:240], y[:240])
     p = clf.predict_proba(X[240:])
     assert p.shape == (60, k)
     np.testing.assert_allclose(p.sum(1), 1.0, atol=1e-9)

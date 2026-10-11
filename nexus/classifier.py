@@ -84,14 +84,15 @@ class NexusClassifier(ClassifierMixin, BaseEstimator):
     n_folds : int, number of cross-fitting folds
     n_repeats : int, independent repetitions of K-fold cross-fitting
     stack_models : None or sequence of model names; layer-2 models trained on
-        the raw features plus all layer-1 out-of-fold probabilities
+        the raw features plus all layer-1 out-of-fold probabilities. The
+        default ("lightgbm", "logreg") is NEXUS v2; None gives NEXUS v1.
     ensemble_size : int, greedy selection iterations
     calibrate : bool, apply temperature scaling to the mixture
     random_state : int
     n_jobs : int, parallel (model, fold) fits via joblib
     """
 
-    def __init__(self, models="default", n_folds=5, n_repeats=1, stack_models=None,
+    def __init__(self, models="default", n_folds=5, n_repeats=1, stack_models=("lightgbm", "logreg"),
                  ensemble_size=50, calibrate=True, random_state=0, n_jobs=1):
         self.models = models
         self.n_folds = n_folds
