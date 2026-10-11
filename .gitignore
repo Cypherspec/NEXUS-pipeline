@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+data/
+results/raw/
+*.egg-info/
+build/
+dist/
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.bbl
+paper/*.blg

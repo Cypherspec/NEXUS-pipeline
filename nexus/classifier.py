@@ -1,0 +1,159 @@
+"""NexusClassifier: bagged model zoo + greedy ensemble selection + temperature."""
+
+from __future__ import annotations
+
+import time
+from dataclasses import dataclass, field
+
+import numpy as np
+from joblib import Parallel, delayed
+from sklearn.base import BaseEstimator, ClassifierMixin, clone
+from sklearn.model_selection import KFold, StratifiedKFold
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import LabelEncoder
+
+from nexus.calibration import apply_temperature, fit_temperature
+from nexus.ensemble import greedy_ensemble_selection, mix
+from nexus.preprocessing import dense_view, split_columns, to_frame, tree_view
+from nexus.zoo import ModelSpec, resolve_zoo
+
+
+class _LocalLabelModel:
+    """Fits on whatever subset of classes a fold contains; predicts all k."""
+
+    def __init__(self, pipeline, n_classes: int):
+        self.pipeline = pipeline
+        self.n_classes = n_classes
+
+    def fit(self, X, y):
+        self.present_ = np.unique(y)
+        if len(self.present_) == 1:
+            return self
+        local = np.searchsorted(self.present_, y)
+        self.pipeline.fit(X, local)
+        return self
+
+    def predict_proba(self, X):
+        out = np.zeros((len(X), self.n_classes))
+        if len(self.present_) == 1:
+            out[:, self.present_[0]] = 1.0
+            return out
+        out[:, self.present_] = self.pipeline.predict_proba(X)
+        return out
+
+
+def _fit_one(spec: ModelSpec, view, X_tr, y_tr, X_va, n_classes, seed):
+    t0 = time.perf_counter()
+    model = _LocalLabelModel(make_pipeline(clone(view), spec.make(seed)), n_classes)
+    model.fit(X_tr, y_tr)
+    fit_time = time.perf_counter() - t0
+    pred = model.predict_proba(X_va) if X_va is not None else None
+    return model, pred, fit_time
+
+
+def _make_folds(y, n_folds, seed):
+    """Stratified folds, shrinking K when the rarest class is too small."""
+    min_count = int(np.bincount(y).min())
+    if min_count >= 2:
+        k = max(2, min(n_folds, min_count))
+        return list(StratifiedKFold(k, shuffle=True, random_state=seed).split(y, y))
+    return list(KFold(n_folds, shuffle=True, random_state=seed).split(y))
+
+
+@dataclass
+class FitReport:
+    oof_proba: dict[str, np.ndarray] = field(default_factory=dict)
+    fit_seconds: dict[str, float] = field(default_factory=dict)
+    weights: dict[str, float] = field(default_factory=dict)
+    temperature: float = 1.0
+
+
+class NexusClassifier(ClassifierMixin, BaseEstimator):
+    """Cross-validated ensemble selection over a diverse model zoo.
+
+    Each base model is trained with K-fold cross-fitting; its K fold models
+    are kept and averaged at prediction time (bagging), and their out-of-fold
+    predictions are used to (1) choose ensemble weights by greedy forward
+    selection minimising log loss and (2) fit a single temperature that
+    calibrates the final mixture. No data outside the training set is used.
+
+    Parameters
+    ----------
+    models : "default" or sequence of model names / ModelSpec
+    n_folds : int, number of cross-fitting folds
+    ensemble_size : int, greedy selection iterations
+    calibrate : bool, apply temperature scaling to the mixture
+    random_state : int
+    n_jobs : int, parallel (model, fold) fits via joblib
+    """
+
+    def __init__(self, models="default", n_folds=5, ensemble_size=50,
+                 calibrate=True, random_state=0, n_jobs=1):
+        self.models = models
+        self.n_folds = n_folds
+        self.ensemble_size = ensemble_size
+        self.calibrate = calibrate
+        self.random_state = random_state
+        self.n_jobs = n_jobs
+
+    def fit(self, X, y):
+        X = to_frame(X).reset_index(drop=True)
+        self.label_encoder_ = LabelEncoder()
+        y_enc = self.label_encoder_.fit_transform(np.asarray(y))
+        self.classes_ = self.label_encoder_.classes_
+        k = len(self.classes_)
+        numeric, categorical = split_columns(X)
+        views = {"tree": tree_view(numeric, categorical),
+                 "dense": dense_view(numeric, categorical)}
+        self.zoo_ = resolve_zoo(self.models)
+
+        folds = _make_folds(y_enc, self.n_folds, self.random_state)
+
+        jobs = [(spec, f, tr, va) for spec in self.zoo_ for f, (tr, va) in enumerate(folds)]
+        results = Parallel(n_jobs=self.n_jobs)(
+            delayed(_fit_one)(spec, views[spec.view], X.iloc[tr], y_enc[tr],
+                              X.iloc[va], k, self.random_state + f)
+            for spec, f, tr, va in jobs
+        )
+
+        report = FitReport()
+        self.fold_models_ = {spec.name: [] for spec in self.zoo_}
+        for spec in self.zoo_:
+            report.oof_proba[spec.name] = np.zeros((len(X), k))
+            report.fit_seconds[spec.name] = 0.0
+        for (spec, _, _, va), (model, pred, secs) in zip(jobs, results):
+            self.fold_models_[spec.name].append(model)
+            report.oof_proba[spec.name][va] = pred
+            report.fit_seconds[spec.name] += secs
+
+        names = [s.name for s in self.zoo_]
+        stack = np.stack([report.oof_proba[n] for n in names])
+        w = greedy_ensemble_selection(stack, y_enc, n_iter=self.ensemble_size)
+        report.weights = dict(zip(names, w))
+        oof_mix = mix(stack, w)
+        report.temperature = fit_temperature(oof_mix, y_enc) if self.calibrate else 1.0
+
+        self.weights_ = report.weights
+        self.temperature_ = report.temperature
+        self.report_ = report
+        self.y_encoded_ = y_enc
+        return self
+
+    def predict_proba_members(self, X) -> dict[str, np.ndarray]:
+        """Bagged (fold-averaged) class probabilities for every zoo member."""
+        X = to_frame(X).reset_index(drop=True)
+        return {
+            name: np.mean([m.predict_proba(X) for m in models], axis=0)
+            for name, models in self.fold_models_.items()
+        }
+
+    def predict_proba(self, X):
+        members = self.predict_proba_members(X)
+        names = list(members)
+        w = np.array([self.weights_[n] for n in names])
+        active = w > 0
+        p = mix(np.stack([members[n] for n, a in zip(names, active) if a]), w[active])
+        return apply_temperature(p, self.temperature_)
+
+    def predict(self, X):
+        return self.classes_[np.argmax(self.predict_proba(X), axis=1)]
