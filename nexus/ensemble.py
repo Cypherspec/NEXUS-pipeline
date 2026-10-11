@@ -37,3 +37,37 @@ def greedy_ensemble_selection(
         counts[best] += 1
         running = candidates[best]
     return counts / counts.sum()
+
+
+def bagged_greedy_selection(
+    probas: np.ndarray, y: np.ndarray, n_iter: int = 50, n_bags: int = 20,
+    model_frac: float = 0.5, seed: int = 0,
+) -> np.ndarray:
+    """Caruana et al. (2006): average greedy weights over random model subsets."""
+    rng = np.random.default_rng(seed)
+    M = probas.shape[0]
+    take = max(1, int(round(model_frac * M)))
+    w = np.zeros(M)
+    for _ in range(n_bags):
+        idx = np.sort(rng.choice(M, take, replace=False))
+        w[idx] += greedy_ensemble_selection(probas[idx], y, n_iter=n_iter)
+    return w / w.sum()
+
+
+def optimal_convex_weights(probas: np.ndarray, y: np.ndarray, l2: float = 0.0) -> np.ndarray:
+    """Simplex weights minimising log loss of the mixture (softmax parametrised)."""
+    from scipy.optimize import minimize
+
+    M = probas.shape[0]
+    p_true = np.clip(probas[:, np.arange(len(y)), y], EPS, 1.0)  # (M, n)
+
+    def f(z):
+        w = np.exp(z - z.max()); w /= w.sum()
+        mixp = np.clip(w @ p_true, EPS, None)
+        loss = -np.mean(np.log(mixp)) + l2 * np.sum(w ** 2)
+        g_w = -(p_true / mixp).mean(axis=1) + 2 * l2 * w
+        return loss, w * (g_w - w @ g_w)
+
+    res = minimize(f, np.zeros(M), jac=True, method="L-BFGS-B")
+    w = np.exp(res.x - res.x.max())
+    return w / w.sum()

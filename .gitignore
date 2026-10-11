@@ -12,3 +12,6 @@ paper/*.out
 paper/*.bbl
 paper/*.blg
 results/run.log
+results/dev/
+results/raw_autogluon*/
+results/*.log
