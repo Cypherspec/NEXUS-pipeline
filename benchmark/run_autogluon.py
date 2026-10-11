@@ -5,8 +5,8 @@ Runs in a separate environment that has autogluon.tabular installed:
     /opt/sota/bin/python -m benchmark.run_autogluon --workers 4
 
 Per fold, AutoGluon (presets="best_quality", 1 CPU, eval_metric="log_loss")
-gets a time limit equal to the wall-clock time NEXUS v1 needed to fit that
-same fold (from results/raw/<task>/fold<k>.npz), with a 60 s floor.
+gets a time limit equal to the wall-clock time NEXUS v2 needed to fit that
+same fold (from results/raw_v2/<task>/fold<k>.npz), with a 60 s floor.
 """
 
 from __future__ import annotations
@@ -29,6 +29,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parent.parent
 RAW = ROOT / "results" / "raw"
+RAW_V2 = ROOT / "results" / "raw_v2"
 OUT = ROOT / "results" / "raw_autogluon"
 MIN_BUDGET = 60
 BUDGET_SCALE = float(os.environ.get("AG_BUDGET_SCALE", "1.0"))
@@ -46,7 +47,8 @@ def run_fold(task_id: int, fold: int) -> str:
     if out.exists():
         return f"{task_id}/{fold} cached"
     ref = np.load(RAW / str(task_id) / f"fold{fold}.npz")
-    budget = max(MIN_BUDGET, float(ref["nexus_fit_seconds"])) * BUDGET_SCALE
+    v2 = np.load(RAW_V2 / str(task_id) / f"fold{fold}.npz")
+    budget = max(MIN_BUDGET, float(v2["nexus_fit_seconds"])) * BUDGET_SCALE
 
     X, y, folds, _ = load_task(task_id)
     y = LabelEncoder().fit_transform(y.astype(str))
@@ -89,7 +91,7 @@ def main():
     if args.tasks:
         tasks = tasks[tasks.task_id.isin(args.tasks)]
     jobs = [(int(t), f) for t in tasks.task_id for f in range(args.folds)
-            if (RAW / str(int(t)) / f"fold{f}.npz").exists()]
+            if (RAW / str(int(t)) / f"fold{f}.npz").exists() and (RAW_V2 / str(int(t)) / f"fold{f}.npz").exists()]
     with ProcessPoolExecutor(args.workers) as pool:
         futs = {pool.submit(run_fold, t, f): (t, f) for t, f in jobs}
         for i, fut in enumerate(as_completed(futs), 1):
