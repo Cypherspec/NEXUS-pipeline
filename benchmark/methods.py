@@ -26,7 +26,7 @@ FAMILY_DISPLAY = {
 
 MAIN_METHODS = [
     "NEXUS", "NEXUS v1", "AutoGluon", "Stacking (LR)", "Uniform average",
-    "Best model by CV", "LightGBM (tuned)", *DISPLAY.values(),
+    "Best model by CV", "LightGBM (tuned)", *(v for k, v in DISPLAY.items() if not k.startswith("L2:")),
 ]
 ENSEMBLE_SIZES = [1, 2, 5, 10, 25, 50, 100]
 

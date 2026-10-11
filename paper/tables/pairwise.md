@@ -1,50 +1,54 @@
 | NEXUS vs. | Metric | W / T / L | Mean rel. improvement [95% CI] | Holm p |
 |---|---|---|---|---|
-| Stacking (LR) | Log loss | 4 / 0 / 1 | +24.4% [-5.3, +55.8] | 0.750 |
-| Uniform average | Log loss | 4 / 0 / 1 | +41.3% [+18.6, +61.6] | 0.750 |
-| Best model by CV | Log loss | 5 / 0 / 0 | +17.8% [+6.4, +29.2] | 0.750 |
-| LightGBM (tuned) | Log loss | 3 / 0 / 2 | +14.2% [-1.7, +30.0] | 0.750 |
-| LightGBM | Log loss | 5 / 0 / 0 | +27.6% [+12.0, +40.2] | 0.750 |
-| XGBoost | Log loss | 5 / 0 / 0 | +27.2% [+16.1, +38.2] | 0.750 |
-| CatBoost | Log loss | 5 / 0 / 0 | +27.0% [+10.7, +46.9] | 0.750 |
-| Random forest | Log loss | 5 / 0 / 0 | +60.0% [+29.5, +80.1] | 0.750 |
-| Extra trees | Log loss | 5 / 0 / 0 | +58.3% [+28.7, +78.7] | 0.750 |
-| Logistic regression | Log loss | 5 / 0 / 0 | +46.0% [+21.8, +71.9] | 0.750 |
-| k-NN | Log loss | 5 / 0 / 0 | +42.6% [+26.7, +58.5] | 0.750 |
-| MLP | Log loss | 4 / 0 / 1 | +13.0% [+4.9, +22.4] | 0.750 |
-| Stacking (LR) | ROC-AUC | 3 / 0 / 2 | -44.3% [-197.8, +58.1] | 1.000 |
-| Uniform average | ROC-AUC | 3 / 0 / 2 | +6.5% [-21.4, +34.3] | 1.000 |
-| Best model by CV | ROC-AUC | 3 / 0 / 2 | +3.4% [-30.6, +41.7] | 1.000 |
-| LightGBM (tuned) | ROC-AUC | 3 / 0 / 2 | +11.1% [-35.6, +48.2] | 1.000 |
-| LightGBM | ROC-AUC | 4 / 0 / 1 | +12.5% [-49.0, +57.7] | 1.000 |
-| XGBoost | ROC-AUC | 4 / 0 / 1 | +39.6% [+10.6, +68.4] | 1.000 |
-| CatBoost | ROC-AUC | 3 / 0 / 2 | +25.6% [-4.6, +51.6] | 1.000 |
-| Random forest | ROC-AUC | 4 / 0 / 1 | +42.4% [+18.7, +63.7] | 1.000 |
-| Extra trees | ROC-AUC | 4 / 1 / 0 | +12.7% [+4.5, +20.9] | 1.000 |
-| Logistic regression | ROC-AUC | 4 / 0 / 1 | +48.4% [+13.4, +83.4] | 1.000 |
-| k-NN | ROC-AUC | 4 / 0 / 1 | +41.8% [-0.2, +78.2] | 1.000 |
-| MLP | ROC-AUC | 4 / 0 / 1 | +22.4% [-25.1, +60.6] | 1.000 |
-| Stacking (LR) | Accuracy | 3 / 1 / 1 | +15.1% [+2.4, +27.9] | 1.000 |
-| Uniform average | Accuracy | 0 / 1 / 4 | -19.7% [-32.4, -6.9] | 1.000 |
-| Best model by CV | Accuracy | 1 / 3 / 1 | +7.8% [-0.7, +24.0] | 1.000 |
-| LightGBM (tuned) | Accuracy | 2 / 3 / 0 | +5.7% [+0.0, +15.0] | 1.000 |
-| LightGBM | Accuracy | 2 / 0 / 3 | -1.2% [-19.2, +20.6] | 1.000 |
-| XGBoost | Accuracy | 4 / 1 / 0 | +19.6% [+6.7, +32.4] | 1.000 |
-| CatBoost | Accuracy | 2 / 1 / 2 | -7.6% [-47.1, +31.8] | 1.000 |
-| Random forest | Accuracy | 4 / 0 / 1 | +17.1% [-4.7, +46.0] | 1.000 |
-| Extra trees | Accuracy | 3 / 0 / 2 | +1.8% [-17.1, +19.2] | 1.000 |
-| Logistic regression | Accuracy | 4 / 1 / 0 | +33.1% [+7.8, +61.3] | 1.000 |
-| k-NN | Accuracy | 3 / 2 / 0 | +22.7% [+2.2, +45.5] | 1.000 |
-| MLP | Accuracy | 2 / 3 / 0 | +4.7% [+0.0, +10.2] | 1.000 |
-| Stacking (LR) | ECE | 4 / 0 / 1 | +24.3% [+5.1, +40.5] | 0.750 |
-| Uniform average | ECE | 5 / 0 / 0 | +65.0% [+32.6, +86.1] | 0.750 |
-| Best model by CV | ECE | 5 / 0 / 0 | +27.4% [+8.1, +53.0] | 0.750 |
-| LightGBM (tuned) | ECE | 5 / 0 / 0 | +13.6% [+4.5, +27.6] | 0.750 |
-| LightGBM | ECE | 5 / 0 / 0 | +21.2% [+7.5, +35.8] | 0.750 |
-| XGBoost | ECE | 3 / 0 / 2 | +11.9% [-26.2, +44.2] | 0.750 |
-| CatBoost | ECE | 5 / 0 / 0 | +50.5% [+35.5, +69.4] | 0.750 |
-| Random forest | ECE | 5 / 0 / 0 | +76.2% [+46.8, +93.2] | 0.750 |
-| Extra trees | ECE | 4 / 0 / 1 | +69.7% [+28.0, +93.5] | 0.750 |
-| Logistic regression | ECE | 5 / 0 / 0 | +46.2% [+14.9, +77.4] | 0.750 |
-| k-NN | ECE | 5 / 0 / 0 | +43.2% [+20.4, +67.5] | 0.750 |
-| MLP | ECE | 4 / 0 / 1 | +11.9% [-2.4, +27.4] | 0.750 |
+| NEXUS v1 | Log loss | 2 / 0 / 0 | +12.8% [+9.6, +16.1] | 1.000 |
+| Stacking (LR) | Log loss | 2 / 0 / 0 | +35.1% [+9.8, +60.4] | 1.000 |
+| Uniform average | Log loss | 2 / 0 / 0 | +34.4% [+9.1, +59.7] | 1.000 |
+| Best model by CV | Log loss | 2 / 0 / 0 | +24.2% [+11.7, +36.7] | 1.000 |
+| LightGBM (tuned) | Log loss | 2 / 0 / 0 | +16.9% [+9.4, +24.4] | 1.000 |
+| LightGBM | Log loss | 2 / 0 / 0 | +30.0% [+24.8, +35.2] | 1.000 |
+| XGBoost | Log loss | 2 / 0 / 0 | +29.0% [+17.6, +40.3] | 1.000 |
+| CatBoost | Log loss | 2 / 0 / 0 | +31.0% [+22.8, +39.1] | 1.000 |
+| Random forest | Log loss | 2 / 0 / 0 | +46.4% [+10.7, +82.1] | 1.000 |
+| Extra trees | Log loss | 2 / 0 / 0 | +46.2% [+11.1, +81.3] | 1.000 |
+| Logistic regression | Log loss | 2 / 0 / 0 | +37.5% [+13.7, +61.2] | 1.000 |
+| k-NN | Log loss | 2 / 0 / 0 | +58.3% [+41.8, +74.7] | 1.000 |
+| MLP | Log loss | 2 / 0 / 0 | +27.1% [+15.6, +38.5] | 1.000 |
+| NEXUS v1 | ROC-AUC | 2 / 0 / 0 | +19.5% [+12.0, +27.0] | 1.000 |
+| Stacking (LR) | ROC-AUC | 2 / 0 / 0 | +41.2% [+28.7, +53.6] | 1.000 |
+| Uniform average | ROC-AUC | 2 / 0 / 0 | +26.8% [+26.4, +27.2] | 1.000 |
+| Best model by CV | ROC-AUC | 2 / 0 / 0 | +40.4% [+28.9, +52.0] | 1.000 |
+| LightGBM (tuned) | ROC-AUC | 2 / 0 / 0 | +28.5% [+26.3, +30.7] | 1.000 |
+| LightGBM | ROC-AUC | 2 / 0 / 0 | +34.1% [+31.2, +37.1] | 1.000 |
+| XGBoost | ROC-AUC | 2 / 0 / 0 | +45.8% [+30.0, +61.6] | 1.000 |
+| CatBoost | ROC-AUC | 2 / 0 / 0 | +39.4% [+26.6, +52.2] | 1.000 |
+| Random forest | ROC-AUC | 2 / 0 / 0 | +44.0% [+26.8, +61.3] | 1.000 |
+| Extra trees | ROC-AUC | 2 / 0 / 0 | +39.3% [+29.8, +48.7] | 1.000 |
+| Logistic regression | ROC-AUC | 2 / 0 / 0 | +58.7% [+32.3, +85.2] | 1.000 |
+| k-NN | ROC-AUC | 2 / 0 / 0 | +65.1% [+38.1, +92.0] | 1.000 |
+| MLP | ROC-AUC | 2 / 0 / 0 | +48.5% [+33.8, +63.3] | 1.000 |
+| NEXUS v1 | Accuracy | 2 / 0 / 0 | +20.8% [+19.1, +22.5] | 1.000 |
+| Stacking (LR) | Accuracy | 2 / 0 / 0 | +26.7% [+17.2, +36.1] | 1.000 |
+| Uniform average | Accuracy | 2 / 0 / 0 | +19.8% [+15.3, +24.4] | 1.000 |
+| Best model by CV | Accuracy | 2 / 0 / 0 | +23.9% [+18.2, +29.5] | 1.000 |
+| LightGBM (tuned) | Accuracy | 2 / 0 / 0 | +22.6% [+21.7, +23.5] | 1.000 |
+| LightGBM | Accuracy | 2 / 0 / 0 | +23.6% [+21.5, +25.8] | 1.000 |
+| XGBoost | Accuracy | 2 / 0 / 0 | +31.2% [+22.6, +39.8] | 1.000 |
+| CatBoost | Accuracy | 2 / 0 / 0 | +28.2% [+21.7, +34.7] | 1.000 |
+| Random forest | Accuracy | 2 / 0 / 0 | +28.4% [+23.4, +33.3] | 1.000 |
+| Extra trees | Accuracy | 2 / 0 / 0 | +22.8% [+16.2, +29.4] | 1.000 |
+| Logistic regression | Accuracy | 2 / 0 / 0 | +42.0% [+23.4, +60.5] | 1.000 |
+| k-NN | Accuracy | 2 / 0 / 0 | +42.6% [+28.0, +57.2] | 1.000 |
+| MLP | Accuracy | 2 / 0 / 0 | +33.1% [+30.1, +36.1] | 1.000 |
+| NEXUS v1 | ECE | 1 / 0 / 1 | -2.4% [-11.4, +6.7] | 1.000 |
+| Stacking (LR) | ECE | 2 / 0 / 0 | +21.4% [+4.1, +38.7] | 1.000 |
+| Uniform average | ECE | 1 / 0 / 1 | +37.0% [-8.9, +82.9] | 1.000 |
+| Best model by CV | ECE | 1 / 0 / 1 | +10.2% [-4.1, +24.6] | 1.000 |
+| LightGBM (tuned) | ECE | 1 / 0 / 1 | -0.5% [-7.1, +6.2] | 1.000 |
+| LightGBM | ECE | 2 / 0 / 0 | +26.1% [+22.0, +30.3] | 1.000 |
+| XGBoost | ECE | 2 / 0 / 0 | +23.4% [+22.9, +23.8] | 1.000 |
+| CatBoost | ECE | 2 / 0 / 0 | +36.2% [+21.8, +50.6] | 1.000 |
+| Random forest | ECE | 2 / 0 / 0 | +51.2% [+9.0, +93.4] | 1.000 |
+| Extra trees | ECE | 1 / 0 / 1 | +34.1% [-25.3, +93.4] | 1.000 |
+| Logistic regression | ECE | 1 / 0 / 1 | +16.7% [-3.0, +36.3] | 1.000 |
+| k-NN | ECE | 1 / 0 / 1 | +26.4% [-6.5, +59.3] | 1.000 |
+| MLP | ECE | 1 / 0 / 1 | +7.4% [-7.3, +22.1] | 1.000 |

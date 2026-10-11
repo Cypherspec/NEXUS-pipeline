@@ -96,6 +96,10 @@ def _process(path: Path):
 def collect(workers: int) -> tuple[pd.DataFrame, pd.DataFrame]:
     paths = sorted(RAW.glob("*/fold*.npz"))
     paths = [p for p in paths if not p.name.endswith(".tmp.npz")]
+    only = os.environ.get("ANALYZE_TASKS")  # e.g. "31,37,1464" for quick smoke tests
+    if only:
+        keep = set(only.split(","))
+        paths = [p for p in paths if p.parent.name in keep]
     with ProcessPoolExecutor(workers) as pool:
         out = list(pool.map(_process, paths, chunksize=4))
     fm = pd.DataFrame([r for rows, _, _ in out for r in rows])

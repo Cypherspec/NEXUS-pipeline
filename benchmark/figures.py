@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 
 import matplotlib
+import matplotlib.ticker
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -117,6 +118,10 @@ def fig_scatter(task):
         ax.scatter(x[better], y[better], s=16, color=BLUE, edgecolor="white", lw=0.6, zorder=3)
         ax.set_xscale("log"); ax.set_yscale("log")
         ax.set_xlim(lo, hi); ax.set_ylim(lo, hi); ax.set_aspect("equal")
+        for axis in (ax.xaxis, ax.yaxis):
+            axis.set_major_locator(matplotlib.ticker.LogLocator(base=10, subs=(1.0,)))
+            axis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: f"{v:g}"))
+            axis.set_minor_formatter(matplotlib.ticker.NullFormatter())
         ax.set_xlabel(f"{ref} log loss")
         ax.text(0.04, 0.96, f"NEXUS better on {better.sum()}/{len(x)}", transform=ax.transAxes,
                 va="top", fontsize=7.5, color=BLUE)
@@ -279,6 +284,7 @@ def fig_reliability():
 
 def main():
     task = pd.read_csv(RES / "task_metrics.csv")
+    MAIN_METHODS[:] = [m for m in MAIN_METHODS if m in set(task.method)]
     info = pd.read_csv(RES / "fold_info.csv")
     info = info[info.task_id.isin(task.task_id.unique())]
     pair = pd.read_csv(RES / "stats" / "pairwise_nexus.csv")
