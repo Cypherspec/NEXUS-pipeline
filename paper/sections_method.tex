@@ -1,0 +1,67 @@
+\section{Method}
+\label{sec:method}
+
+Let $\mathcal{D}=\{(x_i,y_i)\}_{i=1}^n$ with $y_i\in\{1,\dots,k\}$, and let
+$\mathcal{M}=\{f_1,\dots,f_M\}$ be a fixed library of learning algorithms with
+a~priori hyperparameters (Table~\ref{tab:zoo}). NEXUS has three stages, all of
+which use only $\mathcal{D}$.
+
+\paragraph{1. Cross-fitting and bagging.}
+$\mathcal{D}$ is split into $K$ stratified folds $I_1,\dots,I_K$ ($K{=}5$). For every
+algorithm $m$ and fold $j$ we fit $\hat f_{m}^{(-j)}$ on $\mathcal{D}\setminus I_j$
+and record out-of-fold (OOF) class probabilities
+$\hat p_m(x_i)=\hat f_m^{(-j)}(x_i)$ for $i\in I_j$. At test time the $K$ fold models
+are averaged, $\bar f_m(x)=\frac1K\sum_j \hat f_m^{(-j)}(x)$, so no model is ever
+refit on the full data. The OOF matrix gives every algorithm an honest held-out
+estimate on all $n$ training points at no extra cost.
+
+\paragraph{2. Greedy ensemble selection.}
+Following \citet{caruana2004ensemble}, we build a weighted average
+$\hat p_w=\sum_m w_m \hat p_m$ by forward selection with replacement: starting from
+an empty bag, for $T{=}50$ iterations we add the algorithm whose inclusion most
+reduces the OOF log loss of the running average, and set $w_m$ to the fraction of
+iterations in which $m$ was chosen. The weights lie on the simplex, are sparse,
+and are fit by a procedure that cannot overfit as easily as unconstrained
+stacking because each step only averages calibrated-scale probabilities.
+
+\paragraph{3. Temperature calibration.}
+Averaging probabilistic predictions tends to under-disperse them. We fit a
+single temperature $\tau$ by minimising the OOF log loss of
+$\hat p_{w,\tau}(x)_c \propto \hat p_w(x)_c^{1/\tau}$ over $\tau\in[0.05,20]$
+\citep{guo2017calibration}, and apply it to the test-time mixture.
+
+\paragraph{Prediction.}
+$\hat p(x)_c \propto \big(\sum_m w_m \bar f_m(x)_c\big)^{1/\tau}$. Models with $w_m=0$ are
+never evaluated.
+
+\paragraph{Implementation.}
+NEXUS is a scikit-learn compatible estimator \citep{pedregosa2011scikit}. Tree
+models receive ordinal-encoded categoricals with missing values left as NaN;
+linear, $k$-NN and MLP models receive median-imputed, standardized numerics with
+missing-value indicators and one-hot categoricals (at most 32 levels). Folds
+where a rare class is absent are handled by fitting on the classes present and
+assigning zero probability to the rest; $K$ shrinks automatically if the rarest
+class has fewer than $K$ members. Total cost is $K\cdot M$ model fits.
+
+\begin{table}[t]
+\centering
+\caption{The fixed model library. The same configurations are used as
+single-model baselines, so the gains of NEXUS over them cannot come from
+better hyperparameters.}
+\label{tab:zoo}
+\small
+\begin{tabular}{lll}
+\toprule
+Algorithm & Family & Configuration \\
+\midrule
+LightGBM \citep{ke2017lightgbm} & GBDT & 300 trees, lr 0.05, 31 leaves, 0.8 row/col subsample \\
+XGBoost \citep{chen2016xgboost} & GBDT & 300 trees, lr 0.05, depth 6, 0.8 row/col subsample \\
+CatBoost \citep{prokhorenkova2018catboost} & GBDT & 500 iterations, lr 0.08, depth 6 \\
+Random forest \citep{breiman2001random} & bagged trees & 300 trees, $\sqrt{d}$ features \\
+Extra trees \citep{geurts2006extremely} & bagged trees & 300 trees, $\sqrt{d}$ features \\
+Logistic regression & linear & $C{=}1$, L2 \\
+$k$-NN & neighbours & $k{=}15$, distance weighting \\
+MLP & neural & (256, 128) ReLU, early stopping \\
+\bottomrule
+\end{tabular}
+\end{table}

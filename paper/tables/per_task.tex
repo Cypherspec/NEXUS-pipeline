@@ -1,0 +1,12 @@
+\begin{longtable}{llrrrrrrrrr}
+\toprule
+Task & Dataset & $n$ & $d$ & $k$ & NEXUS & Stack. & Best-CV & LGBM-T & CatBoost & LightGBM\\
+\midrule
+\endhead
+32 & pendigits & 10992 & 16 & 10 & \textbf{0.0144} & 0.0589 & 0.0214 & 0.0191 & 0.0225 & 0.0234\\
+125922 & texture & 5500 & 40 & 11 & \textbf{0.0220} & 0.0261 & 0.0328 & 0.0262 & 0.0597 & 0.0363\\
+28 & optdigits & 5620 & 64 & 10 & 0.0520 & 0.1076 & 0.0555 & \textbf{0.0468} & 0.0637 & 0.0527\\
+146824 & mfeat-pixel & 2000 & 240 & 10 & 0.0964 & \textbf{0.0794} & 0.1130 & 0.1654 & 0.0991 & 0.1659\\
+31 & credit-g & 1000 & 20 & 2 & 0.4867 & 0.4878 & 0.4987 & \textbf{0.4859} & 0.5704 & 0.5853\\
+\bottomrule
+\end{longtable}

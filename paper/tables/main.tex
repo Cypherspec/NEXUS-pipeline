@@ -1,0 +1,21 @@
+\begin{tabular}{lrrrrrrrr}
+\toprule
+& \multicolumn{2}{c}{Log loss $\downarrow$} & \multicolumn{2}{c}{ROC-AUC $\uparrow$} & \multicolumn{2}{c}{Accuracy $\uparrow$} & \multicolumn{2}{c}{ECE $\downarrow$}\\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(lr){8-9}
+Method & mean & rank & mean & rank & mean & rank & mean & rank\\
+\midrule
+NEXUS & \textbf{0.1343} & \textbf{2.00} & 0.9580 & 4.30 & 0.9449 & 5.40 & \textbf{0.0262} & \textbf{2.00}\\
+LightGBM (tuned) & 0.1487 & 3.80 & 0.9583 & 5.20 & 0.9431 & 6.40 & 0.0281 & 4.80\\
+Best model by CV & 0.1443 & 5.00 & 0.9569 & 5.30 & 0.9447 & 6.50 & 0.0332 & 6.00\\
+MLP & 0.1523 & 5.00 & 0.9535 & 8.60 & 0.9376 & 7.80 & 0.0305 & 3.80\\
+Stacking (LR) & 0.1520 & 5.60 & 0.9571 & 6.00 & 0.9438 & 7.30 & 0.0313 & 6.00\\
+Uniform average & 0.1646 & 6.80 & \textbf{0.9584} & \textbf{4.20} & \textbf{0.9490} & \textbf{1.80} & 0.0583 & 9.20\\
+CatBoost & 0.1631 & 7.20 & 0.9582 & 6.20 & 0.9429 & 5.10 & 0.0441 & 8.80\\
+LightGBM & 0.1727 & 7.60 & 0.9554 & 7.60 & 0.9417 & 5.70 & 0.0383 & 6.40\\
+XGBoost & 0.1592 & 7.80 & 0.9559 & 9.20 & 0.9391 & 9.60 & 0.0341 & 5.40\\
+k-NN & 0.2187 & 8.80 & 0.9503 & 9.80 & 0.9355 & 9.70 & 0.0379 & 8.20\\
+Logistic regression & 0.1968 & 9.60 & 0.9540 & 10.70 & 0.9305 & 9.90 & 0.0393 & 8.20\\
+Extra trees & 0.2208 & 10.60 & 0.9563 & 5.70 & 0.9380 & 6.80 & 0.1006 & 10.20\\
+Random forest & 0.2301 & 11.20 & 0.9580 & 8.20 & 0.9387 & 9.00 & 0.1078 & 12.00\\
+\bottomrule
+\end{tabular}

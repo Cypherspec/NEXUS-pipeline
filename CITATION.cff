@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use NEXUS, please cite it as below."
+title: "NEXUS: cross-fitted greedy ensemble selection with temperature calibration for tabular classification"
+authors:
+  - name: "Cypherspec"
+version: 1.0.0
+date-released: 2026-10-11
+license: MIT
+repository-code: "https://github.com/Cypherspec/NEXUS-pipeline"

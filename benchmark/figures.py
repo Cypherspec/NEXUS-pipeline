@@ -247,6 +247,28 @@ def fig_profiles(task):
     save(fig, "fig8_performance_profile")
 
 
+def fig_reliability():
+    rel = pd.read_csv(RES / "stats" / "reliability.csv")
+    panels = ["NEXUS w/o calibration", "NEXUS", "Uniform average", "LightGBM (tuned)"]
+    fig, axes = plt.subplots(1, 4, figsize=(7.4, 2.25), sharey=True)
+    for ax, m in zip(axes, panels):
+        d = rel[rel.method == m]
+        d = d[d["count"] >= max(30, 0.002 * d["count"].sum())]  # hide near-empty bins
+        conf, acc, n = d.conf_sum / d["count"], d.correct_sum / d["count"], d["count"]
+        allm = rel[rel.method == m]
+        ece = float(np.sum(np.abs(allm.correct_sum - allm.conf_sum)) / allm["count"].sum())
+        ax.plot([0, 1], [0, 1], color=AXIS, lw=0.8)
+        c = BLUE if m == "NEXUS" else INK2
+        ax.plot(conf, acc, color=c, lw=1.6, marker="o", ms=3.2, mec="white", mew=0.6)
+        ax.set_xlim(0, 1); ax.set_ylim(0, 1); ax.set_aspect("equal")
+        ax.set_title(m, loc="left", fontsize=8, color=c)
+        ax.text(0.97, 0.04, f"pooled ECE {ece:.3f}", transform=ax.transAxes, ha="right", fontsize=7, color=INK2)
+        ax.set_xlabel("confidence")
+    axes[0].set_ylabel("accuracy")
+    fig.tight_layout()
+    save(fig, "fig9_reliability")
+
+
 def main():
     task = pd.read_csv(RES / "task_metrics.csv")
     info = pd.read_csv(RES / "fold_info.csv")
@@ -261,6 +283,7 @@ def main():
     fig_weights(info)
     fig_pareto(task, info)
     fig_profiles(task)
+    fig_reliability()
     print("figures written to", FIG)
 
 

@@ -28,6 +28,8 @@ TABLES = ROOT / "paper" / "tables"
 METRICS = ["log_loss", "roc_auc", "accuracy", "balanced_accuracy", "brier", "ece"]
 METRIC_NAMES = {"log_loss": "Log loss", "roc_auc": "ROC-AUC", "accuracy": "Accuracy",
                 "balanced_accuracy": "Balanced accuracy", "brier": "Brier score", "ece": "ECE"}
+N_BINS = 15
+RELIABILITY_METHODS = ["NEXUS", "NEXUS w/o calibration", "Uniform average", "Stacking (LR)", "LightGBM (tuned)"]
 N_FOLDS = int(os.environ.get("NEXUS_MIN_FOLDS", "10"))
 ABLATIONS = ["NEXUS", "NEXUS w/o calibration", "Uniform average + calibration",
              "NEXUS w/o GBDTs", "NEXUS w/o RF/ET", "NEXUS w/o linear", "NEXUS w/o k-NN",
@@ -43,6 +45,15 @@ def _process(path: Path):
     methods, extra = compute_methods(fold)
     y = fold["y_test"].astype(int)
     rows = [{"task_id": task, "fold": f, "method": m, **all_metrics(y, p)} for m, p in methods.items()]
+    rel = []
+    for m in RELIABILITY_METHODS:
+        p = methods[m]
+        conf, correct = p.max(axis=1), p.argmax(axis=1) == y
+        bins = np.minimum((conf * N_BINS).astype(int), N_BINS - 1)
+        for b in range(N_BINS):
+            sel = bins == b
+            rel.append({"task_id": task, "fold": f, "method": m, "bin": b, "count": int(sel.sum()),
+                        "conf_sum": float(conf[sel].sum()), "correct_sum": float(correct[sel].sum())})
     info = {
         "task_id": task, "fold": f, "temperature": extra["temperature"],
         "best_by_cv": extra["best_by_cv"], "recompute_max_abs_diff": extra["max_abs_diff_vs_saved"],
@@ -53,7 +64,7 @@ def _process(path: Path):
         **{f"single_seconds_{n}": s for n, s in zip(fold["names"], fold["single_fit_seconds"])},
         **{f"member_seconds_{n}": s for n, s in zip(fold["names"], fold["member_fit_seconds"])},
     }
-    return rows, info
+    return rows, info, rel
 
 
 def collect(workers: int) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -61,9 +72,10 @@ def collect(workers: int) -> tuple[pd.DataFrame, pd.DataFrame]:
     paths = [p for p in paths if not p.name.endswith(".tmp.npz")]
     with ProcessPoolExecutor(workers) as pool:
         out = list(pool.map(_process, paths, chunksize=4))
-    fm = pd.DataFrame([r for rows, _ in out for r in rows])
-    info = pd.DataFrame([i for _, i in out])
-    return fm, info
+    fm = pd.DataFrame([r for rows, _, _ in out for r in rows])
+    info = pd.DataFrame([i for _, i, _ in out])
+    rel = pd.DataFrame([r for _, _, rel in out for r in rel])
+    return fm, info, rel
 
 
 # ----------------------------------------------------------------- statistics
@@ -228,9 +240,69 @@ def write_tables(task, stats_main, pair, abl, ranks_by_metric, tasks_meta, info)
         fh.write("\\bottomrule\n\\end{longtable}\n")
 
 
+def _macro_name(*parts) -> str:
+    out = ""
+    for p in parts:
+        p = str(p)
+        for a, b in {"(": "", ")": "", "-": "", "/": "", "+": "Plus", " ": "", "1": "One",
+                     "2": "Two", "5": "Five", "0": "Zero", "_": ""}.items():
+            p = p.replace(a, b)
+        out += p[:1].upper() + p[1:]
+    return out
+
+
+def write_numbers(summary, pair, abl, abl_acc, task, info):
+    """LaTeX macros so every number quoted in the paper comes from the data."""
+    m = {"NTasks": summary["n_tasks_complete"], "NFolds": summary["n_tasks_complete"] * N_FOLDS}
+    for met, st in summary["friedman"].items():
+        key = _macro_name(met)
+        m[f"FriedmanP{key}"] = f"{st['p_value']:.1e}"
+        m[f"CD{key}"] = f"{st['nemenyi_cd']:.2f}"
+        ranks = pd.Series(st["mean_ranks"]).sort_values()
+        m[f"NexusRank{key}"] = f"{ranks['NEXUS']:.2f}"
+        m[f"NexusPlace{key}"] = int(list(ranks.index).index("NEXUS") + 1)
+        nxt = ranks.drop("NEXUS")
+        m[f"BestOtherName{key}"] = nxt.index[0]
+        m[f"BestOtherRank{key}"] = f"{nxt.iloc[0]:.2f}"
+    for _, r in pair.iterrows():
+        k = _macro_name(r.versus, r.metric)
+        m[f"Win{k}"], m[f"Tie{k}"], m[f"Loss{k}"] = r.wins, r.ties, r.losses
+        m[f"Rel{k}"] = f"{100 * r.mean_rel_improvement:.1f}"
+        m[f"RelMed{k}"] = f"{100 * r.median_rel_improvement:.1f}"
+        m[f"CILo{k}"] = f"{100 * r.ci95_low:.1f}"
+        m[f"CIHi{k}"] = f"{100 * r.ci95_high:.1f}"
+        m[f"P{k}"] = _fmt_p(r.p_holm)
+    for df, met in [(abl, "logloss"), (abl_acc, "accuracy")]:
+        for _, r in df.iterrows():
+            k = _macro_name("Abl", r.versus, met)
+            m[f"Rel{k}"] = f"{100 * r.mean_rel_improvement:.1f}"
+            m[f"CILo{k}"] = f"{100 * r.ci95_low:.1f}"
+            m[f"CIHi{k}"] = f"{100 * r.ci95_high:.1f}"
+            m[f"P{k}"] = _fmt_p(r.p_holm)
+            m[f"Win{k}"], m[f"Loss{k}"] = r.wins, r.losses
+    means = task.groupby("method")[METRICS].mean()
+    for meth in ["NEXUS", "LightGBM (tuned)", "Best model by CV", "Stacking (LR)", "CatBoost", "NEXUS w/o calibration"]:
+        for met in METRICS:
+            m[f"Mean{_macro_name(meth, met)}"] = f"{means.loc[meth, met]:.4f}"
+    t = summary["timing_median_seconds"]
+    m["MedianFitNexus"] = f"{t['nexus_fit_seconds']:.1f}"
+    m["MedianFitTuned"] = f"{t['tuned_lgbm_seconds']:.1f}"
+    m["MedianFitSingles"] = f"{t['all_singles_seconds']:.1f}"
+    m["MeanMembers"] = f"{summary['mean_nonzero_members']:.1f}"
+    m["TempMedian"] = f"{summary['temperature_median']:.2f}"
+    m["TempQOne"], m["TempQThree"] = (f"{x:.2f}" for x in summary["temperature_iqr"])
+    m["OracleFrac"] = f"{100 * summary['nexus_beats_test_oracle_single_frac']:.0f}"
+    m["RecomputeDiff"] = f"{summary['recompute_max_abs_diff']:.0e}"
+    with open(ROOT / "paper" / "numbers.tex", "w") as fh:
+        fh.write("% Auto-generated by benchmark/analyze.py. Do not edit.\n")
+        for k, v in m.items():
+            v = str(v).replace("%", "\\%").replace("&", "\\&")
+            fh.write(f"\\newcommand{{\\{k}}}{{{v}}}\n")
+
+
 def main():
     (RES / "stats").mkdir(parents=True, exist_ok=True)
-    fm, info = collect(workers=int(os.environ.get("WORKERS", "4")))
+    fm, info, rel = collect(workers=int(os.environ.get("WORKERS", "4")))
     fm.to_csv(RES / "fold_metrics.csv", index=False)
     info.to_csv(RES / "fold_info.csv", index=False)
 
@@ -238,6 +310,8 @@ def main():
     complete = complete[complete >= N_FOLDS].index
     fm = fm[fm.task_id.isin(complete)]
     info = info[info.task_id.isin(complete)]
+    rel = rel[rel.task_id.isin(complete)]
+    rel.groupby(["method", "bin"])[["count", "conf_sum", "correct_sum"]].sum().to_csv(RES / "stats" / "reliability.csv")
     task = fm.groupby(["task_id", "method"], as_index=False)[METRICS].mean()
     task.to_csv(RES / "task_metrics.csv", index=False)
     tasks_meta = pd.read_csv(ROOT / "benchmark" / "tasks.csv")
@@ -290,6 +364,7 @@ def main():
     summary["headline"] = headline.to_dict(orient="records")
     (RES / "summary.json").write_text(json.dumps(summary, indent=2, default=float))
     write_tables(task, fried, pair, abl, ranks_by_metric, tasks_meta, info)
+    write_numbers(summary, pair, abl, abl_acc, task, info)
     print(json.dumps({k: summary[k] for k in ["n_tasks_complete", "recompute_max_abs_diff"]}, indent=1))
     print(pd.Series(ranks_by_metric["log_loss"]).sort_values().round(2).to_string())
     print(pair[pair.metric == "log_loss"][["versus", "wins", "ties", "losses", "mean_rel_improvement", "p_holm"]].to_string())

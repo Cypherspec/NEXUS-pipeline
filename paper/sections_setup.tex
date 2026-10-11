@@ -1,0 +1,48 @@
+\section{Experimental setup}
+\label{sec:setup}
+
+\paragraph{Tasks.} We use OpenML-CC18 \citep{bischl2021openml,vanschoren2013openml},
+72 curated classification tasks. Before running any experiment we fixed an
+inclusion rule for a 4-core CPU budget: at most 12{,}000 instances and 300
+features. This keeps \NTasks{} tasks (with 2--11 classes, 500--11{,}055 rows, up to
+256 features; Appendix~\ref{app:tasks}) and excludes the image-like and largest
+tasks (e.g.\ MNIST, CIFAR-10, Devnagari, letter, adult). Results therefore speak
+to small and medium tabular data.
+
+\paragraph{Protocol.} Every method is trained and evaluated on the official
+OpenML 10-fold cross-validation splits of each task (\NFolds{} train/test pairs in
+total), so all methods see identical data. Within a training fold, NEXUS and
+every ensemble baseline use only that fold for model fitting, weight
+selection and calibration. Seeds equal the fold index.
+
+\paragraph{Baselines.} (i) Each of the 8 library algorithms, fit once on the full
+training fold. (ii) \emph{LightGBM (tuned)}: random search over 20
+configurations (trees, learning rate, leaves, minimum child samples, row and
+column subsampling, L2), scored by log loss on a stratified 20\% holdout and
+refit on the full training fold. (iii) Three ensembling strategies that share
+NEXUS's exact bagged base predictions and OOF matrix, isolating the combination
+step: \emph{Uniform average} of all 8 bagged models; \emph{Best model by CV},
+the bagged algorithm with the lowest OOF log loss (standard model selection);
+and \emph{Stacking (LR)}, a multinomial logistic-regression meta-learner on
+OOF log-probabilities \citep{wolpert1992stacked,breiman1996stacked}.
+
+\paragraph{Metrics.} Log loss (primary; a strictly proper scoring rule),
+ROC-AUC (binary, or macro one-vs-rest), accuracy, balanced accuracy, Brier score
+and top-label expected calibration error (ECE, 15 bins). Scores are averaged over
+the 10 folds of each task.
+
+\paragraph{Statistics.} Following \citet{demsar2006statistical} we rank methods per
+task, test for any difference with the Friedman test (Iman--Davenport $F$
+form), and draw critical-difference diagrams with the Nemenyi test at
+$\alpha{=}0.05$. For NEXUS versus each competitor we report win/tie/loss counts
+over tasks, Wilcoxon signed-rank tests with Holm correction across competitors
+\citep{garcia2008extension}, and the mean per-task \emph{relative improvement}:
+$(L_\text{other}-L_\text{NEXUS})/L_\text{other}$ for losses and the relative
+reduction of $1-S$ for scores $S$ (AUC, accuracy), with 95\% percentile bootstrap
+confidence intervals over tasks (10{,}000 resamples).
+
+\paragraph{Correctness check.} All ensemble variants and ablations are recomputed
+offline from saved OOF and test predictions. Recomputed NEXUS predictions match
+those produced by the estimator online to within \RecomputeDiff{} (max absolute
+difference in probability), confirming that the analysis evaluates the shipped
+code.
