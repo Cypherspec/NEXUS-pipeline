@@ -1,0 +1,57 @@
+\section{Design study on development datasets}
+\label{sec:dev}
+
+Before touching CC18 we evaluated eleven candidate changes to NEXUS~v1 on 16
+development datasets (Australian, jasmine, sylvine, Titanic, hill-valley,
+monks-problems-2, wine-quality-red, ionosphere, sonar, yeast, page-blocks,
+glass, banana, pc2, waveform-5000, heart-statlog; 155--8{,}378 rows, 2--10
+classes) with 5-fold cross-validation. Member predictions were cached so that all
+candidates are compared on identical base models. \Cref{tab:dev} lists every
+candidate, including those that hurt.
+
+\begin{table}[t]
+\centering
+\caption{Every design candidate evaluated on the 16 development datasets,
+relative to NEXUS~v1. $\Delta R^2$: mean reduction in log loss as a fraction of
+label entropy (percentage points). Rel.\ LL / Rel.\ err.: mean relative
+reduction of log loss / classification error. Wins: datasets where the candidate
+has lower log loss than v1. The bold row was frozen as NEXUS~v2.}
+\label{tab:dev}
+\small
+\input{tables/dev}
+\end{table}
+
+\paragraph{What helped.} Only a second stacking layer gave a consistent gain
+(\Cref{tab:dev}). Using LightGBM and logistic regression as layer-2 models
+captured 97\% of the gain of the best three-model stack at about one ninth of
+its additional cost (CatBoost as a layer-2 model alone cost more than all eight
+layer-1 models together), so this configuration became NEXUS~v2.
+
+\paragraph{What did not.} A 13-configuration extended portfolio (early-stopped
+GBDTs of several sizes, randomised LightGBM, entropy-split forests, alternative
+$k$-NN and MLP settings) added almost nothing on top of the eight-model library,
+even though its early-stopped CatBoost was the single best model. Replacing the
+three GBDTs with early-stopped versions, bagged ensemble selection
+\citep{caruana2006getting} and exact convex optimisation of the weights did not
+improve on plain greedy selection.
+
+\paragraph{A systematic bias in out-of-fold selection.} Selection uses
+single-model OOF predictions, but test-time predictions average $K$ fold models.
+\Cref{tab:bagging} shows that the improvement from this averaging differs
+substantially between algorithms, from about 4\% for logistic regression to
+15\% for $k$-NN, and is consistent across datasets. OOF estimates therefore
+understate the test-time quality of high-variance learners more than that of
+low-variance ones. The principled remedy, repeated cross-fitting so that each
+OOF prediction is itself an average, did not improve the final ensemble on
+average (\Cref{tab:dev}): with eight diverse members, greedy selection appears
+robust to this bias. We report it as a measured effect and a negative result.
+
+\begin{table}[t]
+\centering
+\caption{Bagging gain per algorithm on the development datasets: mean OOF log
+loss of single fold models versus mean test log loss of the 5-model bag, and
+the mean per-dataset relative improvement.}
+\label{tab:bagging}
+\small
+\input{tables/bagging_gain}
+\end{table}

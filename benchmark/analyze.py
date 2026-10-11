@@ -29,11 +29,14 @@ METRICS = ["log_loss", "roc_auc", "accuracy", "balanced_accuracy", "brier", "ece
 METRIC_NAMES = {"log_loss": "Log loss", "roc_auc": "ROC-AUC", "accuracy": "Accuracy",
                 "balanced_accuracy": "Balanced accuracy", "brier": "Brier score", "ece": "ECE"}
 N_BINS = 15
-RELIABILITY_METHODS = ["NEXUS", "NEXUS w/o calibration", "Uniform average", "Stacking (LR)", "LightGBM (tuned)"]
+RELIABILITY_METHODS = ["NEXUS", "NEXUS v1", "NEXUS v1 w/o calibration", "AutoGluon", "Uniform average", "LightGBM (tuned)"]
+RAW_V2 = ROOT / "results" / "raw_v2"
+RAW_AG = ROOT / "results" / "raw_autogluon"
 N_FOLDS = int(os.environ.get("NEXUS_MIN_FOLDS", "10"))
-ABLATIONS = ["NEXUS", "NEXUS w/o calibration", "Uniform average + calibration",
-             "NEXUS w/o GBDTs", "NEXUS w/o RF/ET", "NEXUS w/o linear", "NEXUS w/o k-NN",
-             "NEXUS w/o MLP", "NEXUS (GBDTs only)", "Best model by CV", "Uniform average",
+ABLATION_REF = "NEXUS v1"
+ABLATIONS = ["NEXUS v1 w/o calibration", "Uniform average + calibration",
+             "NEXUS v1 w/o GBDTs", "NEXUS v1 w/o RF/ET", "NEXUS v1 w/o linear", "NEXUS v1 w/o k-NN",
+             "NEXUS v1 w/o MLP", "NEXUS v1 (GBDTs only)", "Best model by CV", "Uniform average",
              "Stacking (LR)"]
 
 
@@ -44,9 +47,24 @@ def _process(path: Path):
     task, f = int(path.parent.name), int(path.stem[4:])
     methods, extra = compute_methods(fold)
     y = fold["y_test"].astype(int)
-    rows = [{"task_id": task, "fold": f, "method": m, **all_metrics(y, p)} for m, p in methods.items()]
+    v2_path = RAW_V2 / path.parent.name / path.name
+    ag_path = RAW_AG / path.parent.name / path.name
+    v2 = dict(np.load(v2_path)) if v2_path.exists() else None
+    if v2 is not None:
+        assert np.array_equal(v2["y_test"], fold["y_test"])
+        methods["NEXUS"] = v2["nexus_test"].astype(np.float64)
+    if ag_path.exists():
+        ag = np.load(ag_path)
+        assert np.array_equal(ag["y_test"], fold["y_test"])
+        methods["AutoGluon"] = ag["proba"].astype(np.float64)
+    prior = np.bincount(fold["y_train"].astype(int), minlength=fold["oof"].shape[2]) / len(fold["y_train"])
+    prior_ll = float(-np.mean(np.log(np.clip(prior[y], 1e-6, 1))))
+    rows = [{"task_id": task, "fold": f, "method": m, "prior_ll": prior_ll, **all_metrics(y, p)}
+            for m, p in methods.items()]
     rel = []
     for m in RELIABILITY_METHODS:
+        if m not in methods:
+            continue
         p = methods[m]
         conf, correct = p.max(axis=1), p.argmax(axis=1) == y
         bins = np.minimum((conf * N_BINS).astype(int), N_BINS - 1)
@@ -64,6 +82,14 @@ def _process(path: Path):
         **{f"single_seconds_{n}": s for n, s in zip(fold["names"], fold["single_fit_seconds"])},
         **{f"member_seconds_{n}": s for n, s in zip(fold["names"], fold["member_fit_seconds"])},
     }
+    if v2 is not None:
+        info["v2_fit_seconds"] = float(v2["nexus_fit_seconds"])
+        info["v2_temperature"] = float(v2["nexus_temperature"])
+        info.update({f"w2_{n}": w for n, w in zip(v2["names"], v2["nexus_weights"])})
+    if ag_path.exists():
+        info["ag_fit_seconds"] = float(ag["fit_seconds"])
+        info["ag_budget"] = float(ag["budget"])
+        info["ag_best_model"] = str(ag["best_model"])
     return rows, info, rel
 
 
@@ -131,10 +157,14 @@ def pairwise_vs(task: pd.DataFrame, ref: str, others: list[str], metric: str) ->
         else:
             rel = (a - b) / (1 - b).clip(lower=1e-12)  # relative reduction of (1 - score)
         lo, hi = bootstrap_ci(rel.to_numpy())
+        h = task[task.method == ref].set_index("task_id").prior_ll.reindex(wide.index)
+        dr2 = 100 * diff / h if metric == "log_loss" else pd.Series(np.nan, index=wide.index)
+        dlo, dhi = bootstrap_ci(dr2.to_numpy()) if metric == "log_loss" else (np.nan, np.nan)
         rows.append({"reference": ref, "versus": o, "metric": metric, "wins": wins, "ties": ties,
                      "losses": losses, "p_wilcoxon": p, "mean_rel_improvement": rel.mean(),
                      "median_rel_improvement": rel.median(), "ci95_low": lo, "ci95_high": hi,
-                     "mean_ref": a.mean(), "mean_other": b.mean()})
+                     "mean_ref": a.mean(), "mean_other": b.mean(),
+                     "mean_dR2_pp": dr2.mean(), "dR2_ci95_low": dlo, "dR2_ci95_high": dhi})
     df = pd.DataFrame(rows)
     df["p_holm"] = holm(df["p_wilcoxon"].to_numpy())
     return df
@@ -201,15 +231,15 @@ def write_tables(task, stats_main, pair, abl, ranks_by_metric, tasks_meta, info)
 
     # Table 3: ablations (log loss)
     with open(TABLES / "ablation.md", "w") as fh:
-        fh.write("| Variant | Mean log loss | Rel. change vs NEXUS [95% CI] | NEXUS W / T / L | Holm p |\n|---|---|---|---|---|\n")
-        base = task[task.method == "NEXUS"].set_index("task_id").log_loss
-        fh.write(f"| NEXUS (full) | {base.mean():.4f} | — | — | — |\n")
+        fh.write("| Variant | Mean log loss | NEXUS v1 rel. improvement [95% CI] | NEXUS v1 W / T / L | Holm p |\n|---|---|---|---|---|\n")
+        base = task[task.method == ABLATION_REF].set_index("task_id").log_loss
+        fh.write(f"| NEXUS v1 (full) | {base.mean():.4f} | — | — | — |\n")
         for _, r in abl.iterrows():
             fh.write(f"| {r.versus} | {r.mean_other:.4f} | {100*r.mean_rel_improvement:+.1f}% "
                      f"[{100*r.ci95_low:+.1f}, {100*r.ci95_high:+.1f}] | {r.wins} / {r.ties} / {r.losses} | {_fmt_p(r.p_holm)} |\n")
     with open(TABLES / "ablation.tex", "w") as fh:
-        fh.write("\\begin{tabular}{lrrcr}\n\\toprule\nVariant & Log loss & NEXUS rel. impr. [95\\% CI] & W/T/L & $p_\\text{Holm}$\\\\\n\\midrule\n")
-        fh.write(f"NEXUS (full) & {base.mean():.4f} & --- & --- & ---\\\\\n")
+        fh.write("\\begin{tabular}{lrrcr}\n\\toprule\nVariant & Log loss & v1 rel. impr. [95\\% CI] & W/T/L & $p_\\text{Holm}$\\\\\n\\midrule\n")
+        fh.write(f"NEXUS v1 (full) & {base.mean():.4f} & --- & --- & ---\\\\\n")
         for _, r in abl.iterrows():
             fh.write(f"{r.versus} & {r.mean_other:.4f} & {100*r.mean_rel_improvement:+.1f}\\% "
                      f"[{100*r.ci95_low:+.1f}, {100*r.ci95_high:+.1f}] & {r.wins}/{r.ties}/{r.losses} & {_fmt_p(r.p_holm)}\\\\\n")
@@ -219,7 +249,7 @@ def write_tables(task, stats_main, pair, abl, ranks_by_metric, tasks_meta, info)
     meta = tasks_meta.set_index("task_id")
     wide_ll = task.pivot(index="task_id", columns="method", values="log_loss")
     wide_acc = task.pivot(index="task_id", columns="method", values="accuracy")
-    cols = ["NEXUS", "Stacking (LR)", "Best model by CV", "LightGBM (tuned)", "CatBoost", "LightGBM"]
+    cols = [c for c in ["NEXUS", "NEXUS v1", "AutoGluon", "Stacking (LR)", "LightGBM (tuned)", "CatBoost"] if c in wide_ll.columns]
     with open(TABLES / "per_task.md", "w") as fh:
         fh.write("| Task | Dataset | n | d | k | " + " | ".join(cols) + " |\n|" + "---|" * (5 + len(cols)) + "\n")
         for tid in wide_ll.sort_values("NEXUS").index:
@@ -272,6 +302,10 @@ def write_numbers(summary, pair, abl, abl_acc, task, info):
         m[f"CILo{k}"] = f"{100 * r.ci95_low:.1f}"
         m[f"CIHi{k}"] = f"{100 * r.ci95_high:.1f}"
         m[f"P{k}"] = _fmt_p(r.p_holm)
+        if r.metric == "log_loss":
+            m[f"DRTwo{k}"] = f"{r.mean_dR2_pp:.2f}"
+            m[f"DRTwoLo{k}"] = f"{r.dR2_ci95_low:.2f}"
+            m[f"DRTwoHi{k}"] = f"{r.dR2_ci95_high:.2f}"
     for df, met in [(abl, "logloss"), (abl_acc, "accuracy")]:
         for _, r in df.iterrows():
             k = _macro_name("Abl", r.versus, met)
@@ -281,11 +315,16 @@ def write_numbers(summary, pair, abl, abl_acc, task, info):
             m[f"P{k}"] = _fmt_p(r.p_holm)
             m[f"Win{k}"], m[f"Loss{k}"] = r.wins, r.losses
     means = task.groupby("method")[METRICS].mean()
-    for meth in ["NEXUS", "LightGBM (tuned)", "Best model by CV", "Stacking (LR)", "CatBoost", "NEXUS w/o calibration"]:
+    for meth in ["NEXUS", "NEXUS v1", "AutoGluon", "LightGBM (tuned)", "Best model by CV", "Stacking (LR)", "CatBoost",
+                 "NEXUS v1 w/o calibration"]:
+        if meth not in means.index:
+            continue
         for met in METRICS:
             m[f"Mean{_macro_name(meth, met)}"] = f"{means.loc[meth, met]:.4f}"
     t = summary["timing_median_seconds"]
-    m["MedianFitNexus"] = f"{t['nexus_fit_seconds']:.1f}"
+    m["MedianFitNexus"] = f"{t.get('v2_fit_seconds', np.nan):.1f}"
+    m["MedianFitVOne"] = f"{t['nexus_fit_seconds']:.1f}"
+    m["MedianFitAutoGluon"] = f"{t.get('ag_fit_seconds', np.nan):.1f}"
     m["MedianFitTuned"] = f"{t['tuned_lgbm_seconds']:.1f}"
     m["MedianFitSingles"] = f"{t['all_singles_seconds']:.1f}"
     m["MeanMembers"] = f"{summary['mean_nonzero_members']:.1f}"
@@ -306,13 +345,18 @@ def main():
     fm.to_csv(RES / "fold_metrics.csv", index=False)
     info.to_csv(RES / "fold_info.csv", index=False)
 
-    complete = fm.groupby("task_id").fold.nunique()
-    complete = complete[complete >= N_FOLDS].index
+    present = [m for m in MAIN_METHODS if m in set(fm.method)]
+    missing = [m for m in MAIN_METHODS if m not in present]
+    if missing:
+        print("WARNING: methods with no results yet, excluded:", missing)
+    MAIN_METHODS[:] = present
+    cnt = fm[fm.method.isin(present)].groupby(["task_id", "method"]).fold.nunique().unstack()
+    complete = cnt.index[(cnt.reindex(columns=present) >= N_FOLDS).all(axis=1)]
     fm = fm[fm.task_id.isin(complete)]
     info = info[info.task_id.isin(complete)]
     rel = rel[rel.task_id.isin(complete)]
     rel.groupby(["method", "bin"])[["count", "conf_sum", "correct_sum"]].sum().to_csv(RES / "stats" / "reliability.csv")
-    task = fm.groupby(["task_id", "method"], as_index=False)[METRICS].mean()
+    task = fm.groupby(["task_id", "method"], as_index=False)[METRICS + ["prior_ll"]].mean()
     task.to_csv(RES / "task_metrics.csv", index=False)
     tasks_meta = pd.read_csv(ROOT / "benchmark" / "tasks.csv")
 
@@ -329,38 +373,41 @@ def main():
     others = [m for m in MAIN_METHODS if m != "NEXUS"]
     pair = pd.concat([pairwise_vs(task, "NEXUS", others, met) for met in ["log_loss", "roc_auc", "accuracy", "ece"]])
     pair.to_csv(RES / "stats" / "pairwise_nexus.csv", index=False)
-    abl = pairwise_vs(task, "NEXUS", [a for a in ABLATIONS if a != "NEXUS"], "log_loss")
+    abl = pairwise_vs(task, ABLATION_REF, ABLATIONS, "log_loss")
     abl.to_csv(RES / "stats" / "ablation_log_loss.csv", index=False)
-    abl_acc = pairwise_vs(task, "NEXUS", [a for a in ABLATIONS if a != "NEXUS"], "accuracy")
+    abl_acc = pairwise_vs(task, ABLATION_REF, ABLATIONS, "accuracy")
     abl_acc.to_csv(RES / "stats" / "ablation_accuracy.csv", index=False)
 
     # Ensemble-size sweep
-    sizes = task[task.method.str.startswith("NEXUS (size")].copy()
+    sizes = task[task.method.str.startswith("NEXUS v1 (size")].copy()
     sizes["size"] = sizes.method.str.extract(r"(\d+)").astype(int)
     sizes.groupby("size")[METRICS].mean().to_csv(RES / "stats" / "ensemble_size.csv")
 
     # Oracle: best bagged single model chosen on the test fold (upper bound for selection)
     bag = task[task.method.str.endswith("(bagged)")]
     oracle = bag.groupby("task_id").log_loss.min()
-    nexus_ll = task[task.method == "NEXUS"].set_index("task_id").log_loss
+    nexus_ll = task[task.method == ABLATION_REF].set_index("task_id").log_loss
     summary["nexus_beats_test_oracle_single_frac"] = float((nexus_ll < oracle).mean())
 
     # Timing
-    t = info.groupby("task_id")[["nexus_fit_seconds", "tuned_lgbm_seconds"]].mean()
+    tcols = [c for c in ["nexus_fit_seconds", "v2_fit_seconds", "ag_fit_seconds", "tuned_lgbm_seconds"] if c in info]
+    t = info.groupby("task_id")[tcols].mean()
     single_cols = [c for c in info.columns if c.startswith("single_seconds_")]
     t["all_singles_seconds"] = info.groupby("task_id")[single_cols].mean().sum(axis=1)
     t.to_csv(RES / "stats" / "timing.csv")
     summary["timing_median_seconds"] = t.median().to_dict()
 
     # Weights
-    wcols = [c for c in info.columns if c.startswith("w_")]
-    summary["mean_weights"] = info[wcols].mean().rename(lambda c: c[2:]).to_dict()
+    wcols = [c for c in info.columns if c.startswith("w2_")] or [c for c in info.columns if c.startswith("w_")]
+    summary["mean_weights"] = info[wcols].mean().rename(lambda c: c.split("_", 1)[1]).to_dict()
     summary["mean_nonzero_members"] = float((info[wcols] > 0).sum(axis=1).mean())
+    if "ag_best_model" in info:
+        summary["autogluon_best_model_counts"] = info.ag_best_model.value_counts().to_dict()
     summary["best_by_cv_counts"] = info.best_by_cv.value_counts().to_dict()
     summary["temperature_median"] = float(info.temperature.median())
     summary["temperature_iqr"] = [float(info.temperature.quantile(.25)), float(info.temperature.quantile(.75))]
 
-    headline = pair[pair.versus.isin(["LightGBM (tuned)", "Best model by CV", "Stacking (LR)", "CatBoost"])]
+    headline = pair[pair.versus.isin(["NEXUS v1", "AutoGluon", "LightGBM (tuned)", "Best model by CV", "Stacking (LR)", "CatBoost"])]
     summary["headline"] = headline.to_dict(orient="records")
     (RES / "summary.json").write_text(json.dumps(summary, indent=2, default=float))
     write_tables(task, fried, pair, abl, ranks_by_metric, tasks_meta, info)

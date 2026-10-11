@@ -1,0 +1,38 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs,longtable}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+\usepackage[capitalise]{cleveref}
+
+\input{numbers}
+
+\title{NEXUS: Cross-Fitted Ensemble Selection with Stacking and Calibration\\
+for Tabular Classification, with a Pre-Registered Evaluation on OpenML-CC18}
+\author{Nischay Kommisetty}
+\date{}
+
+\begin{document}
+\maketitle
+
+\input{sections_abstract}
+\input{sections_intro}
+\input{sections_related}
+\input{sections_method}
+\input{sections_setup}
+\input{sections_results}
+\input{sections_discussion}
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\appendix
+\input{sections_appendix}
+
+\end{document}

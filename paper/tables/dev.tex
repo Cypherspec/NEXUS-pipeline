@@ -1,0 +1,18 @@
+\begin{tabular}{lrrrrr}
+\toprule
+Candidate & Rank & $\Delta R^2$ (pp) & Rel.\ LL & Wins/16 & Rel.\ err.\\
+\midrule
++extended portfolio +L2 stack (3) & 4.88 & +0.64 & +7.6\% & 10 & +6.5\%\\
++L2 stack \{lgbm, logreg, catboost\} & 5.34 & +0.64 & +7.5\% & 9 & +7.6\%\\
+\textbf{+L2 stack \{lgbm, logreg\} (v2)} & \textbf{6.03} & \textbf{+0.62} & \textbf{+7.0\%} & \textbf{11} & \textbf{+7.2\%}\\
++L2 stack \{lgbm, catboost\} & 5.09 & +0.48 & +7.2\% & 11 & +6.9\%\\
++L2 stack \{lgbm\} & 6.09 & +0.38 & +6.3\% & 12 & +7.1\%\\
+repeated cross-fitting R=3 & 7.12 & +0.05 & -1.5\% & 8 & -1.1\%\\
+repeated cross-fitting R=2 & 6.44 & +0.04 & -0.9\% & 11 & -0.9\%\\
++13-config extended portfolio & 6.03 & +0.03 & +0.1\% & 9 & -0.6\%\\
+v1 (greedy selection + temperature) & 7.34 & +0.00 & +0.0\% & 0 & +0.0\%\\
+convex weight optimisation & 7.44 & -0.04 & -0.0\% & 8 & -0.3\%\\
+early-stopped GBDTs (swap) & 7.75 & -0.22 & -5.3\% & 7 & -1.7\%\\
+bagged ensemble selection & 8.44 & -0.49 & -10.5\% & 5 & -0.9\%\\
+\bottomrule
+\end{tabular}

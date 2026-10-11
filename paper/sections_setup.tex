@@ -15,6 +15,12 @@ total), so all methods see identical data. Within a training fold, NEXUS and
 every ensemble baseline use only that fold for model fitting, weight
 selection and calibration. Seeds equal the fold index.
 
+\paragraph{Design protocol.} NEXUS~v2 was designed on 16 development datasets
+from OpenML that are neither in CC18 nor derived from a CC18 dataset
+(\cref{sec:dev}), using 5-fold cross-validation. Its configuration was committed
+to the repository before its first run on CC18, and CC18 was run once. NEXUS~v1,
+the configuration fixed before any experiment, is reported alongside it.
+
 \paragraph{Baselines.} (i) Each of the 8 library algorithms, fit once on the full
 training fold. (ii) \emph{LightGBM (tuned)}: random search over 20
 configurations (trees, learning rate, leaves, minimum child samples, row and
@@ -25,6 +31,12 @@ step: \emph{Uniform average} of all 8 bagged models; \emph{Best model by CV},
 the bagged algorithm with the lowest OOF log loss (standard model selection);
 and \emph{Stacking (LR)}, a multinomial logistic-regression meta-learner on
 OOF log-probabilities \citep{wolpert1992stacked,breiman1996stacked}.
+(iv) \emph{AutoGluon} 1.6 \citep{erickson2020autogluon} with
+\texttt{presets="best\_quality"} and log-loss as the evaluation metric,
+restricted to one CPU core like every other method, and given a time limit
+per fold equal to the wall-clock time NEXUS needed to train on that fold (at
+least 60\,s). AutoGluon therefore receives the same compute as NEXUS but may
+use it for its own model search, bagging and stacking.
 
 \paragraph{Metrics.} Log loss (primary; a strictly proper scoring rule),
 ROC-AUC (binary, or macro one-vs-rest), accuracy, balanced accuracy, Brier score
@@ -39,7 +51,16 @@ over tasks, Wilcoxon signed-rank tests with Holm correction across competitors
 \citep{garcia2008extension}, and the mean per-task \emph{relative improvement}:
 $(L_\text{other}-L_\text{NEXUS})/L_\text{other}$ for losses and the relative
 reduction of $1-S$ for scores $S$ (AUC, accuracy), with 95\% percentile bootstrap
-confidence intervals over tasks (10{,}000 resamples).
+confidence intervals over tasks (10{,}000 resamples). Because relative changes
+explode on tasks whose log loss is close to zero, we also report the change in
+log loss as a fraction of the label entropy $H$ (the log loss of predicting the
+training-set class frequencies), $\Delta R^2 = (L_\text{other}-L_\text{NEXUS})/H$,
+in percentage points. This is the difference in McFadden's pseudo-$R^2$ and is
+well behaved on easy tasks.
+
+\paragraph{Hardware.} All runs use a 4-core x86 CPU server without GPU; each
+fold of each method runs single-threaded, four folds in parallel. Reported
+times are wall-clock under this shared load.
 
 \paragraph{Correctness check.} All ensemble variants and ablations are recomputed
 offline from saved OOF and test predictions. Recomputed NEXUS predictions match

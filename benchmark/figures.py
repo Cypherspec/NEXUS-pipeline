@@ -104,8 +104,9 @@ def fig_cd(task):
 
 def fig_scatter(task):
     wide = task.pivot(index="task_id", columns="method", values="log_loss")
-    refs = ["LightGBM (tuned)", "Best model by CV", "Stacking (LR)"]
-    fig, axes = plt.subplots(1, 3, figsize=(7.2, 2.6))
+    refs = [r for r in ["AutoGluon", "NEXUS v1", "LightGBM (tuned)"] if r in wide.columns]
+    fig, axes = plt.subplots(1, len(refs), figsize=(2.4 * len(refs), 2.6))
+    axes = np.atleast_1d(axes)
     for ax, ref in zip(axes, refs):
         x, y = wide[ref], wide["NEXUS"]
         better = y < x
@@ -172,6 +173,7 @@ def fig_size():
         ax.minorticks_off()
         ax.set_xlabel("greedy selection iterations")
         ax.set_title(f"Mean {METRIC_NAMES[met].lower()}", loc="left")
+    axes[0].set_title("NEXUS v1: mean log loss", loc="left")
     axes[0].annotate("size 1 = best model by CV\n+ temperature", (1, s[s["size"] == 1].log_loss.iloc[0]),
                      xytext=(3, s.log_loss.max()), fontsize=7, color=INK2,
                      arrowprops=dict(arrowstyle="-", color=MUTED, lw=0.6))
@@ -180,8 +182,9 @@ def fig_size():
 
 
 def fig_weights(info):
-    names = [m.name for m in DEFAULT_ZOO]
-    w = info[[f"w_{n}" for n in names]]
+    prefix = "w2_" if any(c.startswith("w2_") for c in info) else "w_"
+    names = [c[len(prefix):] for c in info.columns if c.startswith(prefix)]
+    w = info[[f"{prefix}{n}" for n in names]].fillna(0)
     mean_w = w.mean().to_numpy()
     used = (w > 0).mean().to_numpy()
     order = np.argsort(mean_w)
@@ -207,8 +210,12 @@ def fig_pareto(task, info):
     ranks = rank_matrix(task, MAIN_METHODS, "log_loss").mean()
     cost = {DISPLAY[n]: info[f"single_seconds_{n}"].median() for n in names}
     members = info[[f"member_seconds_{n}" for n in names]].sum(axis=1).median()
-    for m in ["NEXUS", "Stacking (LR)", "Uniform average", "Best model by CV"]:
-        cost[m] = info.nexus_fit_seconds.median() if m == "NEXUS" else members
+    for m in ["NEXUS v1", "Stacking (LR)", "Uniform average", "Best model by CV"]:
+        cost[m] = info.nexus_fit_seconds.median() if m == "NEXUS v1" else members
+    if "v2_fit_seconds" in info:
+        cost["NEXUS"] = info.v2_fit_seconds.median()
+    if "ag_fit_seconds" in info:
+        cost["AutoGluon"] = info.ag_fit_seconds.median()
     cost["LightGBM (tuned)"] = info.tuned_lgbm_seconds.median()
     fig, ax = plt.subplots(figsize=(5.2, 3.2))
     placed = []  # (log10 cost, rank) of labels already placed, to avoid collisions
@@ -231,7 +238,8 @@ def fig_pareto(task, info):
 
 def fig_profiles(task):
     wide = task.pivot(index="task_id", columns="method", values="log_loss")
-    methods = [("NEXUS", BLUE), ("LightGBM (tuned)", ORANGE), ("Best model by CV", AQUA), ("Stacking (LR)", YELLOW)]
+    cand = [("NEXUS", BLUE), ("AutoGluon", ORANGE), ("NEXUS v1", AQUA), ("LightGBM (tuned)", YELLOW)]
+    methods = [(m, c) for m, c in cand if m in wide.columns]
     ratio = wide[[m for m, _ in methods]].div(wide[[m for m, _ in methods]].min(axis=1), axis=0)
     taus = np.linspace(1, 1.5, 400)
     fig, ax = plt.subplots(figsize=(5.2, 3.0))
@@ -249,9 +257,9 @@ def fig_profiles(task):
 
 def fig_reliability():
     rel = pd.read_csv(RES / "stats" / "reliability.csv")
-    panels = ["NEXUS w/o calibration", "NEXUS", "Uniform average", "LightGBM (tuned)"]
-    fig, axes = plt.subplots(1, 4, figsize=(7.4, 2.25), sharey=True)
-    for ax, m in zip(axes, panels):
+    panels = [p for p in ["NEXUS v1 w/o calibration", "NEXUS", "AutoGluon", "LightGBM (tuned)"] if p in set(rel.method)]
+    fig, axes = plt.subplots(1, len(panels), figsize=(1.85 * len(panels), 2.25), sharey=True)
+    for ax, m in zip(np.atleast_1d(axes), panels):
         d = rel[rel.method == m]
         d = d[d["count"] >= max(30, 0.002 * d["count"].sum())]  # hide near-empty bins
         conf, acc, n = d.conf_sum / d["count"], d.correct_sum / d["count"], d["count"]

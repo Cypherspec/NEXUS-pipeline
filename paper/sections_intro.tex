@@ -1,0 +1,41 @@
+\section{Introduction}
+\label{sec:intro}
+
+Tabular classification remains dominated by gradient-boosted decision trees
+\citep{grinsztajn2022tree,mcelfresh2023neural}, yet no single algorithm wins
+everywhere: the best model varies from dataset to dataset, and choosing it by
+cross-validation is itself noisy. Ensembling a diverse library of models
+sidesteps the choice. Greedy ensemble selection \citep{caruana2004ensemble} and
+multi-layer stacking \citep{wolpert1992stacked} are the workhorses behind
+leading AutoML systems such as auto-sklearn \citep{feurer2015efficient} and
+AutoGluon \citep{erickson2020autogluon}, but inside those systems they are
+entangled with hyperparameter search, time budgeting and dozens of engineering
+choices, which makes it hard to tell which ingredients matter.
+
+NEXUS is a deliberately small, fully specified ensemble pipeline: a fixed
+library of eight algorithms with a~priori hyperparameters, bagged cross-fitting,
+an optional second stacking layer, greedy selection of convex ensemble weights,
+and a single calibration temperature. It contains no search and no time
+budget, so its behaviour is deterministic and every component can be ablated.
+
+Our contributions are empirical and methodological rather than a new learning
+algorithm:
+\begin{enumerate}
+\item \textbf{A pre-registered design protocol.} Every design decision for the
+final method was made on 16 development datasets disjoint from the evaluation
+suite, and frozen (and committed to version control) before the method was run
+on the test suite. \Cref{sec:dev} reports all eleven candidates we tried,
+including the ones that did not help.
+\item \textbf{A large, statistically careful evaluation} on \NTasks{} tasks of
+OpenML-CC18 using the official 10-fold splits, against eight single models, a
+tuned gradient-boosting baseline, three ensembling strategies on identical
+base predictions, and AutoGluon given the same per-fold time budget.
+\item \textbf{Component-level evidence}: ablations of every model family and of
+calibration, the effect of ensemble size, and a measurement of a systematic
+bias in out-of-fold model selection: bagging improves high-variance learners
+(e.g.\ $k$-NN, LightGBM) far more than low-variance ones, so out-of-fold
+estimates misjudge their bagged test-time quality.
+\item \textbf{A reproducible open-source package}: a scikit-learn compatible
+estimator, the benchmark harness, raw-prediction caches, and a single script
+that regenerates every number, table and figure in this paper.
+\end{enumerate}

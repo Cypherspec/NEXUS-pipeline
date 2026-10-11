@@ -14,17 +14,19 @@ from nexus.ensemble import EPS, greedy_ensemble_selection, log_loss_from_proba, 
 from nexus.zoo import ZOO_BY_NAME
 
 DISPLAY = {
+    "L2:lightgbm": "L2 LightGBM", "L2:logreg": "L2 logistic regression",
     "lightgbm": "LightGBM", "xgboost": "XGBoost", "catboost": "CatBoost",
     "random_forest": "Random forest", "extra_trees": "Extra trees",
     "logreg": "Logistic regression", "knn": "k-NN", "mlp": "MLP",
 }
 FAMILIES = ["gbdt", "bagged_trees", "linear", "neighbors", "neural"]
-FAMILY_DISPLAY = {"gbdt": "GBDTs", "bagged_trees": "RF/ET", "linear": "linear",
+FAMILY_DISPLAY = {
+    "L2:lightgbm": "L2 LightGBM", "L2:logreg": "L2 logistic regression","gbdt": "GBDTs", "bagged_trees": "RF/ET", "linear": "linear",
                   "neighbors": "k-NN", "neural": "MLP"}
 
 MAIN_METHODS = [
-    "NEXUS", "Stacking (LR)", "Uniform average", "Best model by CV",
-    "LightGBM (tuned)", *DISPLAY.values(),
+    "NEXUS", "NEXUS v1", "AutoGluon", "Stacking (LR)", "Uniform average",
+    "Best model by CV", "LightGBM (tuned)", *DISPLAY.values(),
 ]
 ENSEMBLE_SIZES = [1, 2, 5, 10, 25, 50, 100]
 
@@ -50,10 +52,10 @@ def compute_methods(fold: dict) -> tuple[dict[str, np.ndarray], dict]:
     out: dict[str, np.ndarray] = {}
     extra: dict = {}
 
-    out["NEXUS"], w, t = _nexus(oof, test, y)
+    out["NEXUS v1"], w, t = _nexus(oof, test, y)
     extra["weights"] = dict(zip(names, w))
     extra["temperature"] = t
-    extra["max_abs_diff_vs_saved"] = float(np.abs(out["NEXUS"] - fold["nexus_test"]).max())
+    extra["max_abs_diff_vs_saved"] = float(np.abs(out["NEXUS v1"] - fold["nexus_test"]).max())
 
     out["Stacking (LR)"] = _stacking(oof, test, y)
     out["Uniform average"] = test.mean(axis=0)
@@ -66,16 +68,16 @@ def compute_methods(fold: dict) -> tuple[dict[str, np.ndarray], dict]:
         out[f"{DISPLAY[n]} (bagged)"] = test[i]
 
     # Ablations
-    out["NEXUS w/o calibration"], _, _ = _nexus(oof, test, y, calibrate=False)
+    out["NEXUS v1 w/o calibration"], _, _ = _nexus(oof, test, y, calibrate=False)
     out["Uniform average + calibration"] = apply_temperature(
         test.mean(axis=0), fit_temperature(oof.mean(axis=0), y))
     for fam in FAMILIES:
         keep = [i for i, n in enumerate(names) if ZOO_BY_NAME[n].family != fam]
-        out[f"NEXUS w/o {FAMILY_DISPLAY[fam]}"], _, _ = _nexus(oof[keep], test[keep], y)
+        out[f"NEXUS v1 w/o {FAMILY_DISPLAY[fam]}"], _, _ = _nexus(oof[keep], test[keep], y)
     gbdt = [i for i, n in enumerate(names) if ZOO_BY_NAME[n].family == "gbdt"]
-    out["NEXUS (GBDTs only)"], _, _ = _nexus(oof[gbdt], test[gbdt], y)
+    out["NEXUS v1 (GBDTs only)"], _, _ = _nexus(oof[gbdt], test[gbdt], y)
     for m in ENSEMBLE_SIZES:
-        out[f"NEXUS (size {m})"], _, _ = _nexus(oof, test, y, n_iter=m)
+        out[f"NEXUS v1 (size {m})"], _, _ = _nexus(oof, test, y, n_iter=m)
 
     for key, p in out.items():
         assert p.shape == (len(fold["y_test"]), k), key

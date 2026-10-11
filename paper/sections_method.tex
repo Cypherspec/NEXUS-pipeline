@@ -3,8 +3,8 @@
 
 Let $\mathcal{D}=\{(x_i,y_i)\}_{i=1}^n$ with $y_i\in\{1,\dots,k\}$, and let
 $\mathcal{M}=\{f_1,\dots,f_M\}$ be a fixed library of learning algorithms with
-a~priori hyperparameters (Table~\ref{tab:zoo}). NEXUS has three stages, all of
-which use only $\mathcal{D}$.
+a~priori hyperparameters (Table~\ref{tab:zoo}). NEXUS has four stages, all of
+which use only $\mathcal{D}$; NEXUS~v1 omits stage~2.
 
 \paragraph{1. Cross-fitting and bagging.}
 $\mathcal{D}$ is split into $K$ stratified folds $I_1,\dots,I_K$ ($K{=}5$). For every
@@ -15,7 +15,15 @@ are averaged, $\bar f_m(x)=\frac1K\sum_j \hat f_m^{(-j)}(x)$, so no model is eve
 refit on the full data. The OOF matrix gives every algorithm an honest held-out
 estimate on all $n$ training points at no extra cost.
 
-\paragraph{2. Greedy ensemble selection.}
+\paragraph{2. Second stacking layer.}
+A small set of layer-2 algorithms (LightGBM and logistic regression in the
+final configuration) is cross-fitted exactly as in stage~1, on the raw features
+concatenated with all $M k$ layer-1 OOF probabilities \citep{wolpert1992stacked,erickson2020autogluon}.
+At test time the layer-2 inputs are the bagged layer-1 test predictions. The
+layer-2 models become additional ensemble candidates; they do not replace the
+layer-1 models.
+
+\paragraph{3. Greedy ensemble selection.}
 Following \citet{caruana2004ensemble}, we build a weighted average
 $\hat p_w=\sum_m w_m \hat p_m$ by forward selection with replacement: starting from
 an empty bag, for $T{=}50$ iterations we add the algorithm whose inclusion most
@@ -26,7 +34,7 @@ strong regulariser compared with a learned meta-model
 \citep{caruana2006getting}, which we test directly against stacking in
 Section~\ref{sec:results}.
 
-\paragraph{3. Temperature calibration.}
+\paragraph{4. Temperature calibration.}
 Averaging probabilistic predictions tends to under-disperse them. We fit a
 single temperature $\tau$ by minimising the OOF log loss of
 $\hat p_{w,\tau}(x)_c \propto \hat p_w(x)_c^{1/\tau}$ over $\tau\in[0.05,20]$
@@ -43,7 +51,10 @@ linear, $k$-NN and MLP models receive median-imputed, standardized numerics with
 missing-value indicators and one-hot categoricals (at most 32 levels). Folds
 where a rare class is absent are handled by fitting on the classes present and
 assigning zero probability to the rest; $K$ shrinks automatically if the rarest
-class has fewer than $K$ members. Total cost is $K\cdot M$ model fits.
+class has fewer than $K$ members. Total cost is $K\cdot(M + M_2)$ model fits,
+with $M{=}8$ and $M_2{=}2$. The estimator also supports $R$ repetitions of
+cross-fitting (\texttt{n\_repeats}), which we evaluate but do not use in the
+final configuration (\cref{sec:dev}).
 
 \begin{table}[t]
 \centering

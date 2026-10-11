@@ -1,0 +1,32 @@
+\section{Related work}
+\label{sec:related}
+
+\paragraph{Ensemble selection and stacking.} \citet{caruana2004ensemble}
+introduced forward selection with replacement from a model library, and
+\citet{caruana2006getting} studied its overfitting and proposed bagged
+selection. Stacked generalisation \citep{wolpert1992stacked} trains a
+meta-learner on out-of-fold predictions; \citet{breiman1996stacked} showed the
+value of constraining stacking weights to be non-negative. Auto-sklearn
+\citep{feurer2015efficient} uses ensemble selection over models found by
+Bayesian optimisation; AutoGluon-Tabular \citep{erickson2020autogluon} combines
+repeated bagging, multi-layer stacking with skip connections to the raw
+features, and a final weighted ensemble.
+
+\paragraph{Cross-fitting.} Training on $K-1$ folds and predicting the held-out
+fold to obtain honest nuisance estimates is standard in semiparametric
+statistics \citep{chernozhukov2018double}; the same device underlies
+out-of-fold predictions in stacking.
+
+\paragraph{Calibration.} Temperature scaling \citep{guo2017calibration} is a
+one-parameter post-hoc correction; \citet{niculescu2005predicting} documented
+systematic miscalibration of boosted trees and other learners.
+
+\paragraph{Tabular benchmarks.} OpenML-CC18 \citep{bischl2021openml} is a curated
+suite of 72 classification tasks with fixed splits; the AutoML Benchmark
+\citep{gijsbers2024amlb} compares AutoML systems under time budgets. Recent work
+compares deep and tree-based models on tabular data
+\citep{grinsztajn2022tree,mcelfresh2023neural}, and tabular foundation models
+such as TabPFN \citep{hollmann2025tabpfn} are strong on small datasets.
+We follow \citet{demsar2006statistical} and \citet{garcia2008extension} for
+multi-dataset statistical comparison and \citet{dolan2002benchmarking} for
+performance profiles.
