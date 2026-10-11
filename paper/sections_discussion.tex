@@ -1,0 +1,43 @@
+\section{Discussion}
+\label{sec:discussion}
+
+\paragraph{What the evidence supports.} The results in \cref{sec:results}
+show where a small, fully specified ensemble of standard learners
+stands relative to strong single models and to a mature AutoML system under an
+equal compute budget. The development study (\cref{sec:dev}) and the CC18
+ablations point to the same mechanisms: averaging over cross-fitted models and
+selecting a sparse convex combination of diverse learners do most of the work,
+a light second stacking layer adds a consistent but modest gain, and further
+engineering (larger portfolios, alternative weight optimisers, repeated
+cross-fitting) yields little on data of this size.
+
+\paragraph{Limitations.}
+\begin{itemize}
+\item \emph{Scope.} We evaluate \NTasks{} of the 72 CC18 tasks: datasets above
+12{,}000 rows or 300 features were excluded by a rule fixed in advance for a
+4-core CPU budget. Conclusions may not transfer to large or high-dimensional
+data, to regression, or to GPU-accelerated deep models.
+\item \emph{Compute budget for AutoGluon.} AutoGluon receives the same wall-clock
+budget as NEXUS on a single core, typically a few minutes. With hour-scale
+budgets, as in the AutoML Benchmark \citep{gijsbers2024amlb}, AutoGluon can
+train more models and its results would likely improve. Our comparison
+answers a specific question: what each approach achieves with equal, modest compute.
+\item \emph{Missing competitors.} We could not include TabPFN
+\citep{hollmann2025tabpfn}, whose weights require a license acceptance not
+available in our environment; it is known to be strong on small data and is the
+most important comparison to add.
+\item \emph{Single run per fold.} Each fold uses one seed. Variability across
+folds and tasks is captured by our tests, but not seed variance within a fold.
+\item \emph{Novelty.} Each component of NEXUS (bagging, ensemble selection,
+stacking, temperature scaling) is established. Our contribution is a careful,
+pre-registered characterisation of their combination, not a new learning
+algorithm.
+\end{itemize}
+
+\section{Conclusion}
+NEXUS combines bagged cross-fitting, a light stacking layer, greedy convex
+ensemble selection and temperature scaling into a deterministic,
+search-free classifier. We designed it on held-out development datasets, froze
+it, and evaluated it once on \NTasks{} OpenML-CC18 tasks with official splits,
+equal-budget AutoGluon, and rigorous multi-dataset statistics. Code, cached
+predictions and a one-command reproduction script are released with the paper.

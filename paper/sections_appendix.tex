@@ -1,0 +1,25 @@
+\section{Benchmark tasks and per-task results}
+\label{app:tasks}
+
+\Cref{tab:pertask} lists every evaluated task with its size and the mean test
+log loss (over 10 official folds) of NEXUS and the strongest references. Tasks
+are ordered by NEXUS log loss; the best value per row is bold.
+
+{\scriptsize
+\input{tables/per_task}
+\label{tab:pertask}
+}
+
+\section{Tuned LightGBM search space}
+\label{app:tuning}
+Random search over 20 configurations: number of trees $\in\{100,200,400,800\}$;
+learning rate log-uniform in $[0.01, 0.3]$; leaves $\in\{7,15,31,63,127\}$; minimum
+child samples $\in\{5,10,20,50\}$; row subsample $U(0.5,1)$ (every iteration);
+column subsample $U(0.4,1)$; L2 regularisation log-uniform in $[10^{-3},10]$.
+Configurations are scored by log loss on a stratified 20\% holdout of the
+training fold and the best is refit on the full training fold.
+
+\section{Software}
+Python 3.13; NumPy 2.5; pandas 3.0; SciPy 1.18; scikit-learn 1.9; LightGBM 4.7;
+XGBoost 3.4; CatBoost 1.2; AutoGluon 1.6 (separate environment). Exact pins are in
+\texttt{requirements-lock.txt}.

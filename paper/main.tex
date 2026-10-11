@@ -12,9 +12,16 @@
 \usepackage[capitalise]{cleveref}
 
 \input{numbers}
+% Fallbacks so the paper compiles before every experiment has finished.
+\providecommand{\pending}{\textbf{\textcolor{red}{??}}}
+\providecommand{\WinAutoGluonLogloss}{\pending}\providecommand{\TieAutoGluonLogloss}{\pending}
+\providecommand{\LossAutoGluonLogloss}{\pending}\providecommand{\PAutoGluonLogloss}{\pending}
+\providecommand{\DRTwoAutoGluonLogloss}{\pending}\providecommand{\DRTwoLoAutoGluonLogloss}{\pending}
+\providecommand{\DRTwoHiAutoGluonLogloss}{\pending}\providecommand{\WinAutoGluonAccuracy}{\pending}
+\providecommand{\TieAutoGluonAccuracy}{\pending}\providecommand{\LossAutoGluonAccuracy}{\pending}
+\providecommand{\PAutoGluonAccuracy}{\pending}
 
-\title{NEXUS: Cross-Fitted Ensemble Selection with Stacking and Calibration\\
-for Tabular Classification, with a Pre-Registered Evaluation on OpenML-CC18}
+\title{NEXUS: Cross-Fitted Ensemble Selection with Stacking and\\Calibration for Tabular Classification}
 \author{Nischay Kommisetty}
 \date{}
 

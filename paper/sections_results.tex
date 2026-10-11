@@ -1,0 +1,158 @@
+\input{sections_dev}
+
+\section{Results on OpenML-CC18}
+\label{sec:results}
+
+\subsection{Overall comparison}
+
+\Cref{tab:main} reports mean scores and mean ranks over the \NTasks{} tasks and
+\cref{fig:cd} the corresponding critical-difference diagrams. The Friedman test
+rejects equal performance for log loss ($p=\FriedmanPLogloss$), ROC-AUC
+($p=\FriedmanPRocauc$) and accuracy ($p=\FriedmanPAccuracy$). On log loss, NEXUS
+has mean rank \NexusRankLogloss{} (place \NexusPlaceLogloss{} of 15); the best
+other method is \BestOtherNameLogloss{} (\BestOtherRankLogloss). On accuracy,
+NEXUS ranks \NexusRankAccuracy{} (place \NexusPlaceAccuracy{}), and on ROC-AUC
+\NexusRankRocauc{} (place \NexusPlaceRocauc{}).
+
+\begin{table}[t]
+\centering
+\caption{Mean score over \NTasks{} CC18 tasks (each task averaged over its 10
+official folds) and mean rank among the 15 methods (lower is better). Best per
+column in bold.}
+\label{tab:main}
+\scriptsize
+\input{tables/main}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/fig1_critical_difference.pdf}
+\caption{Critical-difference diagrams (Nemenyi, $\alpha=0.05$). Thick bars join
+methods whose mean ranks are not significantly different.}
+\label{fig:cd}
+\end{figure}
+
+\subsection{Pairwise comparisons}
+
+\Cref{tab:pairwise} and \cref{fig:forest} compare NEXUS with every other method
+task by task. \Cref{fig:scatter} shows the per-task log loss against the three
+strongest references. Against AutoGluon with the same per-fold time budget,
+NEXUS wins on \WinAutoGluonLogloss{}, ties on \TieAutoGluonLogloss{} and loses on
+\LossAutoGluonLogloss{} tasks in log loss (Holm-corrected $p=\PAutoGluonLogloss$;
+$\Delta R^2 = \DRTwoAutoGluonLogloss$\,pp, 95\% CI
+[\DRTwoLoAutoGluonLogloss, \DRTwoHiAutoGluonLogloss]), and wins/ties/loses on
+\WinAutoGluonAccuracy/\TieAutoGluonAccuracy/\LossAutoGluonAccuracy{} tasks in
+accuracy ($p=\PAutoGluonAccuracy$). Against its own predecessor NEXUS~v1 the
+stacking layer wins on \WinNEXUSvOneLogloss{} and loses on
+\LossNEXUSvOneLogloss{} tasks in log loss ($p=\PNEXUSvOneLogloss$;
+$\Delta R^2=\DRTwoNEXUSvOneLogloss$\,pp). Against the tuned LightGBM baseline
+the record is \WinLightGBMtunedLogloss/\TieLightGBMtunedLogloss/\LossLightGBMtunedLogloss{}
+($p=\PLightGBMtunedLogloss$; mean relative log-loss reduction
+\RelLightGBMtunedLogloss\%, 95\% CI [\CILoLightGBMtunedLogloss, \CIHiLightGBMtunedLogloss]).
+
+\begin{table}[t]
+\centering
+\caption{NEXUS versus each competitor over \NTasks{} tasks: wins/ties/losses,
+mean per-task relative improvement with 95\% bootstrap CI, and Holm-corrected
+Wilcoxon signed-rank $p$-values.}
+\label{tab:pairwise}
+\scriptsize
+\input{tables/pairwise}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/fig3_relative_improvement.pdf}
+\caption{Mean per-task relative improvement of NEXUS over each competitor with
+95\% bootstrap confidence intervals. Positive values favour NEXUS.}
+\label{fig:forest}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/fig2_per_task_scatter.pdf}
+\caption{Per-task log loss of NEXUS (vertical) against three references
+(horizontal); points below the diagonal favour NEXUS.}
+\label{fig:scatter}
+\end{figure}
+
+\subsection{Ablations}
+
+\Cref{tab:ablation} and \cref{fig:ablation} ablate NEXUS~v1 on the same saved
+predictions. Removing temperature scaling changes log loss by
+\RelAblNEXUSvOnewocalibrationLogloss\% (CI [\CILoAblNEXUSvOnewocalibrationLogloss,
+\CIHiAblNEXUSvOnewocalibrationLogloss]); replacing selection by choosing the best
+model by cross-validation costs \RelAblBestmodelbyCVLogloss\%; restricting the
+library to the three GBDTs costs \RelAblNEXUSvOneGBDTsonlyLogloss\%; uniform
+averaging of all members costs \RelAblUniformaverageLogloss\%; and a
+logistic-regression stacker costs \RelAblStackingLRLogloss\%. Positive values mean
+the full method is better.
+
+\begin{table}[t]
+\centering
+\caption{Ablations of NEXUS~v1 (log loss). Each variant re-uses the same bagged
+base-model predictions.}
+\label{tab:ablation}
+\scriptsize
+\input{tables/ablation}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.8\linewidth]{figures/fig4_ablation.pdf}
+\caption{Ablations of NEXUS~v1: relative log-loss reduction of the full method
+over each variant (95\% CI).}
+\label{fig:ablation}
+\end{figure}
+
+\subsection{Ensemble composition, size and calibration}
+
+On average NEXUS selects \MeanMembers{} of its 10 candidates per fold
+(\cref{fig:weights}). Greedy selection converges quickly (\cref{fig:size}): the
+gain from 25 to 100 iterations is negligible. The fitted temperature has median
+\TempMedian{} (IQR \TempQOne--\TempQThree). \Cref{fig:reliability} shows pooled
+reliability diagrams.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.85\linewidth]{figures/fig6_ensemble_weights.pdf}
+\caption{Mean ensemble weight of each candidate and the share of fits in which
+it is selected (\NFolds{} fits).}
+\label{fig:weights}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.8\linewidth]{figures/fig5_ensemble_size.pdf}
+\caption{Effect of the number of greedy selection iterations (NEXUS~v1 library).}
+\label{fig:size}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/fig9_reliability.pdf}
+\caption{Reliability diagrams pooled over all test predictions.}
+\label{fig:reliability}
+\end{figure}
+
+\subsection{Cost}
+
+Median single-core training time per fold is \MedianFitNexus\,s for NEXUS,
+\MedianFitVOne\,s for NEXUS~v1, \MedianFitTuned\,s for the tuned LightGBM and
+\MedianFitSingles\,s for all eight single models together (\cref{fig:cost}).
+\Cref{fig:profile} gives performance profiles.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.75\linewidth]{figures/fig7_cost_vs_rank.pdf}
+\caption{Mean log-loss rank versus median training time per fold.}
+\label{fig:cost}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.75\linewidth]{figures/fig8_performance_profile.pdf}
+\caption{Performance profiles \citep{dolan2002benchmarking}: fraction of tasks on
+which a method's log loss is within a factor $\tau$ of the best of the four.}
+\label{fig:profile}
+\end{figure}

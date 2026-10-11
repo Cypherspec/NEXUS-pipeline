@@ -16,3 +16,4 @@ results/dev/
 results/raw_autogluon*/
 results/*.log
 results/raw_v2/
+paper/main.pdf

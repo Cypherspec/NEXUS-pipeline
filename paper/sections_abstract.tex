@@ -1,0 +1,18 @@
+\begin{abstract}
+We present NEXUS, a deterministic ensemble classifier for tabular data that
+cross-fits a fixed library of eight diverse learners, adds a two-model stacking
+layer, selects sparse convex ensemble weights by greedy forward selection on
+out-of-fold predictions, and calibrates the mixture with a single temperature.
+All design decisions were made on 16 development datasets disjoint from the
+evaluation suite, and the design was frozen and publicly committed before
+evaluation. On \NTasks{} OpenML-CC18 tasks
+with their official 10-fold splits, NEXUS achieves mean log-loss rank
+\NexusRankLogloss{} among 15 methods, including eight single models with default
+hyperparameters, a tuned LightGBM, three ensembling strategies on identical base
+predictions, and AutoGluon given the same per-fold compute budget.
+%RESULT-SENTENCE%
+We also report negative results: larger model portfolios, alternative weight
+optimisers and repeated cross-fitting did not help, despite a measurable,
+learner-dependent bias in out-of-fold estimates of bagged models. Code, cached
+predictions and a one-command reproduction script are provided.
+\end{abstract}
