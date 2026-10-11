@@ -108,3 +108,14 @@ def test_repeats_one_matches_v1_and_more_repeats_bag_more_models():
     c = NexusClassifier(models=FAST, n_folds=3, n_repeats=2, random_state=1).fit(X, y)
     assert len(c.fold_models_["lightgbm"]) == 6
     np.testing.assert_allclose(c.report_.oof_proba["lightgbm"].sum(1), 1.0, atol=1e-9)
+
+
+def test_two_layer_stacking():
+    X, y = _data(k=3)
+    clf = NexusClassifier(models=FAST, stack_models=["lightgbm", "logreg"], n_folds=3).fit(X[:240], y[:240])
+    members = clf.predict_proba_members(X[240:])
+    assert {"L2:lightgbm", "L2:logreg"} <= set(members)
+    assert sum(clf.weights_.values()) == pytest.approx(1.0)
+    p = clf.predict_proba(X[240:])
+    np.testing.assert_allclose(p.sum(1), 1.0, atol=1e-9)
+    assert (clf.predict(X[240:]) == y[240:]).mean() > 0.6

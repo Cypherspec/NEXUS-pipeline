@@ -6,6 +6,7 @@ import time
 from dataclasses import dataclass, field
 
 import numpy as np
+import pandas as pd
 from joblib import Parallel, delayed
 from sklearn.base import BaseEstimator, ClassifierMixin, clone
 from sklearn.model_selection import KFold, StratifiedKFold
@@ -82,21 +83,60 @@ class NexusClassifier(ClassifierMixin, BaseEstimator):
     models : "default" or sequence of model names / ModelSpec
     n_folds : int, number of cross-fitting folds
     n_repeats : int, independent repetitions of K-fold cross-fitting
+    stack_models : None or sequence of model names; layer-2 models trained on
+        the raw features plus all layer-1 out-of-fold probabilities
     ensemble_size : int, greedy selection iterations
     calibrate : bool, apply temperature scaling to the mixture
     random_state : int
     n_jobs : int, parallel (model, fold) fits via joblib
     """
 
-    def __init__(self, models="default", n_folds=5, n_repeats=1, ensemble_size=50,
-                 calibrate=True, random_state=0, n_jobs=1):
+    def __init__(self, models="default", n_folds=5, n_repeats=1, stack_models=None,
+                 ensemble_size=50, calibrate=True, random_state=0, n_jobs=1):
         self.models = models
         self.n_folds = n_folds
         self.n_repeats = n_repeats
+        self.stack_models = stack_models
         self.ensemble_size = ensemble_size
         self.calibrate = calibrate
         self.random_state = random_state
         self.n_jobs = n_jobs
+
+    def _crossfit(self, zoo, X, y, k, prefix, report):
+        """Bagged cross-fitting of every spec in `zoo` on frame X.
+
+        Repetition r re-shuffles the folds; averaging a point's R out-of-fold
+        predictions mimics the bagged predictor used at test time.
+        """
+        numeric, categorical = split_columns(X)
+        views = {"tree": tree_view(numeric, categorical),
+                 "dense": dense_view(numeric, categorical)}
+        jobs = []
+        for r in range(self.n_repeats):
+            folds = _make_folds(y, self.n_folds, self.random_state + 1000 * r)
+            jobs += [(spec, f + 1000 * r, tr, va) for spec in zoo
+                     for f, (tr, va) in enumerate(folds)]
+        results = Parallel(n_jobs=self.n_jobs)(
+            delayed(_fit_one)(spec, views[spec.view], X.iloc[tr], y[tr],
+                              X.iloc[va], k, self.random_state + f)
+            for spec, f, tr, va in jobs
+        )
+        models = {prefix + spec.name: [] for spec in zoo}
+        for spec in zoo:
+            report.oof_proba[prefix + spec.name] = np.zeros((len(X), k))
+            report.fit_seconds[prefix + spec.name] = 0.0
+        for (spec, _, _, va), (model, pred, secs) in zip(jobs, results):
+            name = prefix + spec.name
+            models[name].append(model)
+            report.oof_proba[name][va] += pred / self.n_repeats
+            report.fit_seconds[name] += secs
+        return models
+
+    @staticmethod
+    def _stack_features(X, l1_probas: list[np.ndarray]) -> pd.DataFrame:
+        P = np.concatenate(l1_probas, axis=1)
+        cols = [f"__nexus_l1_{i}" for i in range(P.shape[1])]
+        return pd.concat([X, pd.DataFrame(P, columns=cols, index=X.index)], axis=1)
 
     def fit(self, X, y):
         X = to_frame(X).reset_index(drop=True)
@@ -104,35 +144,18 @@ class NexusClassifier(ClassifierMixin, BaseEstimator):
         y_enc = self.label_encoder_.fit_transform(np.asarray(y))
         self.classes_ = self.label_encoder_.classes_
         k = len(self.classes_)
-        numeric, categorical = split_columns(X)
-        views = {"tree": tree_view(numeric, categorical),
-                 "dense": dense_view(numeric, categorical)}
         self.zoo_ = resolve_zoo(self.models)
-
-        # Repetition r re-shuffles the folds; averaging a point's R out-of-fold
-        # predictions mimics the bagged predictor used at test time.
-        jobs = []
-        for r in range(self.n_repeats):
-            folds = _make_folds(y_enc, self.n_folds, self.random_state + 1000 * r)
-            jobs += [(spec, f + 1000 * r, tr, va) for spec in self.zoo_
-                     for f, (tr, va) in enumerate(folds)]
-        results = Parallel(n_jobs=self.n_jobs)(
-            delayed(_fit_one)(spec, views[spec.view], X.iloc[tr], y_enc[tr],
-                              X.iloc[va], k, self.random_state + f)
-            for spec, f, tr, va in jobs
-        )
+        self.stack_zoo_ = resolve_zoo(self.stack_models) if self.stack_models else ()
 
         report = FitReport()
-        self.fold_models_ = {spec.name: [] for spec in self.zoo_}
-        for spec in self.zoo_:
-            report.oof_proba[spec.name] = np.zeros((len(X), k))
-            report.fit_seconds[spec.name] = 0.0
-        for (spec, _, _, va), (model, pred, secs) in zip(jobs, results):
-            self.fold_models_[spec.name].append(model)
-            report.oof_proba[spec.name][va] += pred / self.n_repeats
-            report.fit_seconds[spec.name] += secs
+        self.fold_models_ = self._crossfit(self.zoo_, X, y_enc, k, "", report)
+        self.l1_names_ = [s.name for s in self.zoo_]
+        if self.stack_zoo_:
+            # Layer 2 sees the raw features plus every layer-1 OOF probability.
+            X2 = self._stack_features(X, [report.oof_proba[n] for n in self.l1_names_])
+            self.fold_models_.update(self._crossfit(self.stack_zoo_, X2, y_enc, k, "L2:", report))
 
-        names = [s.name for s in self.zoo_]
+        names = list(self.fold_models_)
         stack = np.stack([report.oof_proba[n] for n in names])
         w = greedy_ensemble_selection(stack, y_enc, n_iter=self.ensemble_size)
         report.weights = dict(zip(names, w))
@@ -146,12 +169,16 @@ class NexusClassifier(ClassifierMixin, BaseEstimator):
         return self
 
     def predict_proba_members(self, X) -> dict[str, np.ndarray]:
-        """Bagged (fold-averaged) class probabilities for every zoo member."""
+        """Bagged (fold-averaged) class probabilities for every member."""
         X = to_frame(X).reset_index(drop=True)
-        return {
-            name: np.mean([m.predict_proba(X) for m in models], axis=0)
-            for name, models in self.fold_models_.items()
-        }
+        bag = lambda models, Z: np.mean([m.predict_proba(Z) for m in models], axis=0)
+        out = {n: bag(self.fold_models_[n], X) for n in self.l1_names_}
+        if self.stack_zoo_:
+            X2 = self._stack_features(X, [out[n] for n in self.l1_names_])
+            for n, models in self.fold_models_.items():
+                if n.startswith("L2:"):
+                    out[n] = bag(models, X2)
+        return out
 
     def predict_proba(self, X):
         members = self.predict_proba_members(X)
