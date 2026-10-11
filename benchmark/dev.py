@@ -101,8 +101,10 @@ def fit_member(did: int, fold: int, name: str) -> str:
         test += model.predict_proba(X_te) / len(inner)
     secs = time.perf_counter() - t0
     out.parent.mkdir(parents=True, exist_ok=True)
-    np.savez_compressed(out, oof=oof.astype(np.float32), test=test.astype(np.float32),
+    tmp = out.with_suffix(".tmp.npz")
+    np.savez_compressed(tmp, oof=oof.astype(np.float32), test=test.astype(np.float32),
                         y_train=y_tr.astype(np.int16), y_test=y[te].astype(np.int16), seconds=secs)
+    tmp.rename(out)
     return f"{did}/{fold}/{name} {secs:.0f}s"
 
 
