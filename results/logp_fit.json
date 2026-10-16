@@ -1,0 +1,28 @@
+{
+  "dataset": "MoleculeNet Lipophilicity (experimental logD 7.4, ChEMBL)",
+  "n_molecules": 4200,
+  "n_atom_types": 33,
+  "split": "scaffold (train+valid vs held-out test)",
+  "ridge_lambda": 1.0,
+  "train": {
+    "n": 3780,
+    "mae": 0.7967328881157743,
+    "rmse": 0.9925607057525966,
+    "r2": 0.32467848907282715,
+    "pearson_r": 0.5698071918072088
+  },
+  "test": {
+    "n": 420,
+    "mae": 0.8015913878063751,
+    "rmse": 1.027439903631326,
+    "r2": 0.20886533823821973,
+    "pearson_r": 0.4863257072825324
+  },
+  "baseline_predict_mean": {
+    "n": 420,
+    "mae": 0.9399154195011337,
+    "rmse": 1.1575186524799512,
+    "r2": -0.004138343265223998,
+    "pearson_r": -1.098426379508242e-16
+  }
+}

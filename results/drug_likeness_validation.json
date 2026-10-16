@@ -1,0 +1,18 @@
+{
+  "clintox": {
+    "n_approved": 1390,
+    "n_not_approved": 94,
+    "mean_score_approved": 0.5995285145368198,
+    "mean_score_not_approved": 0.6012756107432449,
+    "median_score_approved": 0.8350765907136986,
+    "median_score_not_approved": 0.8356256648630884,
+    "auc_approved_vs_not": 0.5153757844788,
+    "mean_lipinski_violations_approved": 0.3899280575539568,
+    "mean_lipinski_violations_not_approved": 0.6382978723404256
+  },
+  "hiv_library_control": {
+    "n_sampled": 3000,
+    "mean_score": 0.7118762298072816,
+    "auc_approved_vs_hiv_library": 0.42730023980815346
+  }
+}

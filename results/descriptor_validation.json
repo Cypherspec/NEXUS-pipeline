@@ -1,0 +1,258 @@
+{
+  "delaney-processed.csv": {
+    "n_molecules": 1128,
+    "descriptors": {
+      "Molecular Weight": {
+        "implementation": "mw",
+        "n": 1128,
+        "pearson_r": 0.9999919190777257,
+        "mean_abs_error": 0.07079255319150624,
+        "median_abs_error": 1.4210854715202004e-14,
+        "max_abs_error": 8.063999999999965,
+        "fraction_exact": 0.9565602836879432,
+        "fraction_within_tol": 0.9565602836879432,
+        "tolerance": 0.6
+      },
+      "_all": {
+        "Number of H-Bond Donors [hbd]": {
+          "implementation": "hbd",
+          "n": 1128,
+          "pearson_r": 0.9679203324067827,
+          "mean_abs_error": 0.08156028368794327,
+          "median_abs_error": 0.0,
+          "max_abs_error": 3.0,
+          "fraction_exact": 0.9281914893617021,
+          "fraction_within_tol": 0.9281914893617021,
+          "tolerance": 0.5
+        },
+        "Number of H-Bond Donors [hbd_strict]": {
+          "implementation": "hbd_strict",
+          "n": 1128,
+          "pearson_r": 0.9981402573896982,
+          "mean_abs_error": 0.004432624113475178,
+          "median_abs_error": 0.0,
+          "max_abs_error": 1.0,
+          "fraction_exact": 0.9955673758865248,
+          "fraction_within_tol": 0.9955673758865248,
+          "tolerance": 0.5
+        },
+        "Polar Surface Area [tpsa]": {
+          "implementation": "tpsa",
+          "n": 1128,
+          "pearson_r": 0.99971409853577,
+          "mean_abs_error": 0.20093971631205662,
+          "median_abs_error": 0.0,
+          "max_abs_error": 8.039999999999964,
+          "fraction_exact": 0.9343971631205674,
+          "fraction_within_tol": 0.9450354609929078,
+          "tolerance": 0.6
+        },
+        "Polar Surface Area [tpsa_sp]": {
+          "implementation": "tpsa_sp",
+          "n": 1128,
+          "pearson_r": 0.9301869104216757,
+          "mean_abs_error": 4.227393617021277,
+          "median_abs_error": 0.0,
+          "max_abs_error": 134.39999999999998,
+          "fraction_exact": 0.8297872340425532,
+          "fraction_within_tol": 0.8404255319148937,
+          "tolerance": 0.6
+        }
+      },
+      "Number of H-Bond Donors": {
+        "implementation": "hbd_strict",
+        "n": 1128,
+        "pearson_r": 0.9981402573896982,
+        "mean_abs_error": 0.004432624113475178,
+        "median_abs_error": 0.0,
+        "max_abs_error": 1.0,
+        "fraction_exact": 0.9955673758865248,
+        "fraction_within_tol": 0.9955673758865248,
+        "tolerance": 0.5
+      },
+      "Number of Rings": {
+        "implementation": "rings",
+        "n": 1128,
+        "pearson_r": 0.9989913763333336,
+        "mean_abs_error": 0.0035460992907801418,
+        "median_abs_error": 0.0,
+        "max_abs_error": 1.0,
+        "fraction_exact": 0.9964539007092199,
+        "fraction_within_tol": 0.9964539007092199,
+        "tolerance": 0.5
+      },
+      "Number of Rotatable Bonds": {
+        "implementation": "rotatable_bonds",
+        "n": 1128,
+        "pearson_r": 0.9839670787810323,
+        "mean_abs_error": 0.23049645390070922,
+        "median_abs_error": 0.0,
+        "max_abs_error": 3.0,
+        "fraction_exact": 0.7978723404255319,
+        "fraction_within_tol": 0.7978723404255319,
+        "tolerance": 0.5
+      },
+      "Polar Surface Area": {
+        "implementation": "tpsa",
+        "n": 1128,
+        "pearson_r": 0.99971409853577,
+        "mean_abs_error": 0.20093971631205662,
+        "median_abs_error": 0.0,
+        "max_abs_error": 8.039999999999964,
+        "fraction_exact": 0.9343971631205674,
+        "fraction_within_tol": 0.9450354609929078,
+        "tolerance": 0.6
+      }
+    }
+  },
+  "bace.csv": {
+    "n_molecules": 1513,
+    "descriptors": {
+      "MW": {
+        "implementation": "mw",
+        "n": 1513,
+        "pearson_r": 0.999999999935984,
+        "mean_abs_error": 0.009311692002739038,
+        "median_abs_error": 0.00929000000007818,
+        "max_abs_error": 0.02170000000046457,
+        "fraction_exact": 1.0,
+        "fraction_within_tol": 1.0,
+        "tolerance": 0.6
+      },
+      "_all": {
+        "HBD [hbd]": {
+          "implementation": "hbd",
+          "n": 1513,
+          "pearson_r": 0.9104453842574215,
+          "mean_abs_error": 1.4230006609385326,
+          "median_abs_error": 1.0,
+          "max_abs_error": 5.0,
+          "fraction_exact": 0.05287508261731659,
+          "fraction_within_tol": 0.05287508261731659,
+          "tolerance": 0.5
+        },
+        "HBD [hbd_strict]": {
+          "implementation": "hbd_strict",
+          "n": 1513,
+          "pearson_r": 0.9497917515664536,
+          "mean_abs_error": 0.44745538664904166,
+          "median_abs_error": 0.0,
+          "max_abs_error": 3.0,
+          "fraction_exact": 0.596827495042961,
+          "fraction_within_tol": 0.596827495042961,
+          "tolerance": 0.5
+        },
+        "HBA [hba]": {
+          "implementation": "hba",
+          "n": 1513,
+          "pearson_r": 0.8153568240657054,
+          "mean_abs_error": 2.9021810971579645,
+          "median_abs_error": 3.0,
+          "max_abs_error": 19.0,
+          "fraction_exact": 0.005948446794448116,
+          "fraction_within_tol": 0.005948446794448116,
+          "tolerance": 0.5
+        },
+        "HBA [hba_strict]": {
+          "implementation": "hba_strict",
+          "n": 1513,
+          "pearson_r": 0.8752074817960426,
+          "mean_abs_error": 0.914738929279577,
+          "median_abs_error": 1.0,
+          "max_abs_error": 8.0,
+          "fraction_exact": 0.2604097818902842,
+          "fraction_within_tol": 0.2604097818902842,
+          "tolerance": 0.5
+        },
+        "PSA [tpsa]": {
+          "implementation": "tpsa",
+          "n": 1513,
+          "pearson_r": 0.970378703482782,
+          "mean_abs_error": 4.770271857237278,
+          "median_abs_error": 2.00000000916134e-06,
+          "max_abs_error": 50.60001,
+          "fraction_exact": 0.6384666226040978,
+          "fraction_within_tol": 0.6384666226040978,
+          "tolerance": 0.6
+        },
+        "PSA [tpsa_sp]": {
+          "implementation": "tpsa_sp",
+          "n": 1513,
+          "pearson_r": 0.9998483973041935,
+          "mean_abs_error": 0.11380163648381138,
+          "median_abs_error": 9.999999974752427e-07,
+          "max_abs_error": 8.199998999999991,
+          "fraction_exact": 0.9576999339061467,
+          "fraction_within_tol": 0.9576999339061467,
+          "tolerance": 0.6
+        }
+      },
+      "HBD": {
+        "implementation": "hbd_strict",
+        "n": 1513,
+        "pearson_r": 0.9497917515664536,
+        "mean_abs_error": 0.44745538664904166,
+        "median_abs_error": 0.0,
+        "max_abs_error": 3.0,
+        "fraction_exact": 0.596827495042961,
+        "fraction_within_tol": 0.596827495042961,
+        "tolerance": 0.5
+      },
+      "HBA": {
+        "implementation": "hba_strict",
+        "n": 1513,
+        "pearson_r": 0.8752074817960426,
+        "mean_abs_error": 0.914738929279577,
+        "median_abs_error": 1.0,
+        "max_abs_error": 8.0,
+        "fraction_exact": 0.2604097818902842,
+        "fraction_within_tol": 0.2604097818902842,
+        "tolerance": 0.5
+      },
+      "RB": {
+        "implementation": "rotatable_bonds",
+        "n": 1513,
+        "pearson_r": 0.9992629353644975,
+        "mean_abs_error": 0.03502974223397224,
+        "median_abs_error": 0.0,
+        "max_abs_error": 1.0,
+        "fraction_exact": 0.9649702577660277,
+        "fraction_within_tol": 0.9649702577660277,
+        "tolerance": 0.5
+      },
+      "HeavyAtomCount": {
+        "implementation": "heavy_atoms",
+        "n": 1513,
+        "pearson_r": 0.9999999999999998,
+        "mean_abs_error": 0.0,
+        "median_abs_error": 0.0,
+        "max_abs_error": 0.0,
+        "fraction_exact": 1.0,
+        "fraction_within_tol": 1.0,
+        "tolerance": 0.5
+      },
+      "RingCount": {
+        "implementation": "rings",
+        "n": 1513,
+        "pearson_r": 0.9999999999999999,
+        "mean_abs_error": 0.0,
+        "median_abs_error": 0.0,
+        "max_abs_error": 0.0,
+        "fraction_exact": 1.0,
+        "fraction_within_tol": 1.0,
+        "tolerance": 0.5
+      },
+      "PSA": {
+        "implementation": "tpsa_sp",
+        "n": 1513,
+        "pearson_r": 0.9998483973041935,
+        "mean_abs_error": 0.11380163648381138,
+        "median_abs_error": 9.999999974752427e-07,
+        "max_abs_error": 8.199998999999991,
+        "fraction_exact": 0.9576999339061467,
+        "fraction_within_tol": 0.9576999339061467,
+        "tolerance": 0.6
+      }
+    }
+  }
+}
