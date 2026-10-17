@@ -135,6 +135,12 @@ def summarise(runs: list[dict]) -> dict:
         "width_spread": float(np.mean([r["width_spread"] for r in runs])),
         "conditional_by_quintile": [float(v) for v in conditional.mean(axis=0)],
         "worst_quintile_coverage": float(conditional.mean(axis=0).min()),
+        # How far conditional coverage drifts across difficulty. Constant-width
+        # intervals over-cover easy molecules and under-cover hard ones, so a
+        # large spread is the failure adaptive widths are meant to fix; the
+        # worst single quintile alone does not show it.
+        "conditional_spread": float(conditional.mean(axis=0).max()
+                                    - conditional.mean(axis=0).min()),
         "cwc": float(np.mean([r["cwc"] for r in runs])),
         "n_seeds": len(runs),
     }
@@ -159,6 +165,7 @@ def main() -> None:
             print(f"  {label:<11} coverage {s['coverage']:.3f}  width "
                   f"{s['mean_width']:.3f} (sd {s['width_spread']:.3f})  "
                   f"worst quintile {s['worst_quintile_coverage']:.3f}  "
+                  f"spread {s['conditional_spread']:.3f}  "
                   f"CWC {s['cwc']:.3f}", flush=True)
 
     (ROOT / "results").mkdir(exist_ok=True)

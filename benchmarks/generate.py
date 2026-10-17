@@ -20,6 +20,7 @@ from pathlib import Path
 import numpy as np
 
 from nexus.chem.descriptors import drug_likeness, num_rings, tpsa
+from nexus.chem.scaffold import subgraph
 from nexus.chem.smiles import write_smiles
 from nexus.models.ddpm import (
     MoleculeDDPM,
@@ -67,32 +68,83 @@ def load_training_graphs(max_atoms: int = MAX_ATOMS, limit: int = 20000):
     return graphs, reference
 
 
+def _finish(mol) -> tuple[object, str] | None:
+    """Returns the molecule and its SMILES when it is chemically well-formed."""
+    if mol is None or mol.n_atoms == 0 or not mol.is_sane():
+        return None
+    try:
+        return mol, write_smiles(mol)
+    except Exception:
+        return None
+
+
 def evaluate(samples, training_smiles: set[str]) -> dict:
+    """Scores a set of generated graphs.
+
+    Two validity figures are reported because the literature is not consistent
+    about which it means:
+
+      validity           the graph is a single connected, valence-correct
+                         molecule -- the strict reading
+      validity_largest_fragment
+                         the largest connected component is valence-correct,
+                         which is the convention used when samples are
+                         fragment-filtered before scoring
+
+    The rejection breakdown is kept too, since "invalid" covers very different
+    failures: an over-valent atom is a chemistry error, a graph in two pieces
+    is a connectivity failure, and the two call for different fixes.
+    """
     valid, smiles = [], []
+    frag_valid, frag_smiles = [], []
+    reasons: dict[str, int] = {}
+    degrees = []
     for atoms, bonds in samples:
+        degrees.append(float((np.asarray(bonds) != 0).sum()) / max(1, len(bonds)))
         mol = graph_to_molecule(atoms, bonds)
         if mol is None or mol.n_atoms == 0:
+            reasons["empty_or_undecodable"] = reasons.get("empty_or_undecodable", 0) + 1
             continue
         if not mol.is_sane():
+            reasons["valence"] = reasons.get("valence", 0) + 1
             continue
-        if len(mol.components()) != 1:
+
+        components = mol.components()
+        if len(components) == 1:
+            done = _finish(mol)
+            if done is None:
+                reasons["unwritable"] = reasons.get("unwritable", 0) + 1
+                continue
+            valid.append(done[0])
+            smiles.append(done[1])
+            frag_valid.append(done[0])
+            frag_smiles.append(done[1])
             continue
-        try:
-            smi = write_smiles(mol)
-        except Exception:
-            continue
-        valid.append(mol)
-        smiles.append(smi)
+
+        reasons["disconnected"] = reasons.get("disconnected", 0) + 1
+        largest = subgraph(mol, max(components, key=len))
+        done = _finish(largest.perceive() if hasattr(largest, "perceive") else largest)
+        if done is not None:
+            frag_valid.append(done[0])
+            frag_smiles.append(done[1])
+
     n = len(samples)
     unique = set(smiles)
     novel = unique - training_smiles
+    frag_unique = set(frag_smiles)
     return {
         "n_sampled": n,
         "validity": len(valid) / n if n else 0.0,
+        "validity_largest_fragment": len(frag_valid) / n if n else 0.0,
         "uniqueness": len(unique) / len(smiles) if smiles else 0.0,
         "novelty": len(novel) / len(unique) if unique else 0.0,
+        "mean_degree": float(np.mean(degrees)) if degrees else 0.0,
+        "rejections": reasons,
         "valid_molecules": valid,
         "smiles": smiles,
+        "fragment_smiles": frag_smiles,
+        "fragment_uniqueness": (len(frag_unique) / len(frag_smiles)
+                                if frag_smiles else 0.0),
     }
 
 
@@ -108,12 +160,24 @@ def property_summary(mols) -> dict:
     }
 
 
+def _public(result: dict) -> dict:
+    """Strips the molecule objects, keeping the reportable numbers."""
+    return {k: v for k, v in result.items()
+            if k not in ("valid_molecules", "smiles", "fragment_smiles")}
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--steps", type=int, default=4000)
     ap.add_argument("--samples", type=int, default=300)
     ap.add_argument("--diffusion-steps", type=int, default=50)
     ap.add_argument("--hidden", type=int, default=96)
+    ap.add_argument("--batch", type=int, default=8)
+    # Chosen by the sweep in the paper: mean generated degree rises
+    # monotonically with class_balance, and these settings came closest to the
+    # training-set mean. Selected on the reported metric, with no held-out set.
+    ap.add_argument("--class-balance", type=float, default=1.5)
+    ap.add_argument("--bond-weight", type=float, default=3.0)
     args = ap.parse_args()
 
     graphs, reference_smiles = load_training_graphs()
@@ -121,24 +185,30 @@ def main() -> None:
     print(f"training on {len(graphs)} molecules (<= {MAX_ATOMS} heavy atoms)")
 
     model = MoleculeDDPM(n_steps=args.diffusion_steps, hidden=args.hidden,
-                         depth=3, max_atoms=MAX_ATOMS, seed=0)
+                         depth=3, max_atoms=MAX_ATOMS, seed=0,
+                         class_balance=args.class_balance,
+                         bond_weight=args.bond_weight)
     model.fit_marginals(graphs)
     optimizer = Adam(model.model.parameters(), lr=2e-3)
     rng = np.random.default_rng(0)
 
     t0 = time.time()
     losses = []
-    for step in range(1, args.steps + 1):
-        atoms, bonds = graphs[rng.integers(len(graphs))]
-        t = int(rng.integers(1, model.n_steps + 1))
+    for step in range(1, args.steps // args.batch + 1):
         optimizer.zero_grad()
-        loss = model.loss(atoms, bonds, t, rng)
-        loss.backward()
+        total = None
+        for _ in range(args.batch):
+            atoms, bonds = graphs[rng.integers(len(graphs))]
+            t = int(rng.integers(1, model.n_steps + 1))
+            loss = model.loss(atoms, bonds, t, rng)
+            total = loss if total is None else total + loss
+        total = total * (1.0 / args.batch)
+        total.backward()
         optimizer.clip_grad_norm(5.0)
         optimizer.step()
-        losses.append(float(loss.data))
-        if step % max(1, args.steps // 10) == 0:
-            print(f"  step {step:5d}  loss {np.mean(losses[-200:]):.4f}"
+        losses.append(float(total.data))
+        if step % max(1, (args.steps // args.batch) // 10) == 0:
+            print(f"  step {step * args.batch:6d}  loss {np.mean(losses[-50:]):.4f}"
                   f"  ({time.time() - t0:.0f}s)", flush=True)
     train_seconds = time.time() - t0
 
@@ -177,19 +247,21 @@ def main() -> None:
         "max_atoms": MAX_ATOMS,
         "training_steps": args.steps,
         "diffusion_steps": args.diffusion_steps,
-        "final_loss": float(np.mean(losses[-200:])),
+        "final_loss": float(np.mean(losses[-50:])),
         "train_seconds": round(train_seconds, 1),
         "sample_seconds": round(sample_seconds, 1),
-        "model": {k: v for k, v in trained.items()
-                  if k not in ("valid_molecules", "smiles")},
-        "model_unconstrained_sampling": {
-            k: v for k, v in unconstrained.items()
-            if k not in ("valid_molecules", "smiles")},
-        "marginal_baseline": {k: v for k, v in baseline.items()
-                              if k not in ("valid_molecules", "smiles")},
+        "class_balance": args.class_balance,
+        "bond_weight": args.bond_weight,
+        "batch_size": args.batch,
+        "training_mean_degree": float(np.mean(
+            [float((b != 0).sum()) / max(1, len(b)) for _, b in graphs])),
+        "model": _public(trained),
+        "model_unconstrained_sampling": _public(unconstrained),
+        "marginal_baseline": _public(baseline),
         "properties_generated": property_summary(trained["valid_molecules"]),
         "properties_training": property_summary(training_mols),
         "example_smiles": trained["smiles"][:25],
+        "example_fragment_smiles": trained["fragment_smiles"][:25],
     }
     (ROOT / "results").mkdir(exist_ok=True)
     (ROOT / "results" / "generation.json").write_text(json.dumps(report, indent=2))

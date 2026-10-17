@@ -506,11 +506,81 @@ def fig_scaffold_split() -> None:
     save(fig, "fig9_scaffold_leakage")
 
 
+def fig_adaptive_conformal() -> None:
+    """Adaptive interval widths: what they buy, and what they cost.
+
+    Marginal coverage is guaranteed for every score, so the question is only
+    whether width adapts usefully. Left: mean width at matched coverage.
+    Right: coverage inside difficulty quintiles, where a flat line at the
+    nominal level is the ideal and the hardest quintile is the one that
+    matters for triage.
+    """
+    data = load("conformal_adaptive.json")
+    nominal = data["nominal_coverage"]
+    datasets = list(data["datasets"].keys())
+    variants = ["standard", "gp_sigma", "residual_fitted"]
+    pretty = {"standard": "constant width", "gp_sigma": "scaled by GP sd",
+              "residual_fitted": "fitted residual model"}
+    colours = {"standard": "#a9a8a1", "gp_sigma": BLUE, "residual_fitted": ORANGE}
+
+    fig, axes = plt.subplots(1, 2, figsize=(7.6, 2.9))
+
+    ax = axes[0]
+    x = np.arange(len(datasets))
+    width = 0.26
+    for k, variant in enumerate(variants):
+        widths, labels = [], []
+        for name in datasets:
+            entry = data["datasets"][name].get(variant, {})
+            widths.append(entry.get("mean_width", np.nan))
+            labels.append(entry.get("coverage", np.nan))
+        offset = (k - 1) * width
+        ax.bar(x + offset, widths, width, color=colours[variant],
+               label=pretty[variant])
+        for xi, w, cov in zip(x + offset, widths, labels):
+            if np.isfinite(w):
+                ax.text(xi, w, f"{cov:.2f}", ha="center", va="bottom",
+                        fontsize=6.5, color=INK2, rotation=90)
+    ax.set_xticks(x)
+    ax.set_xticklabels(datasets)
+    ax.set_ylabel("mean interval width")
+    ax.set_title("Width at matched coverage", loc="left")
+    ax.legend(fontsize=7, loc="upper left", bbox_to_anchor=(0.0, 1.02))
+    ax.grid(axis="x", visible=False)
+    ax.set_ylim(0, max(ax.get_ylim()[1] * 1.28, 1))
+    # Numbers above each bar are the measured marginal coverage.
+    ax.text(0.0, -0.26, "labels: measured marginal coverage",
+            transform=ax.transAxes, fontsize=6.5, color=MUTED)
+
+    ax = axes[1]
+    for variant in variants:
+        series = [data["datasets"][name].get(variant, {}).get(
+            "conditional_by_quintile") for name in datasets]
+        series = [s for s in series if s]
+        if not series:
+            continue
+        mean = np.mean(np.array(series, dtype=float), axis=0)
+        ax.plot(np.arange(1, len(mean) + 1), mean, marker="o", markersize=4,
+                linewidth=2, color=colours[variant], label=pretty[variant])
+    ax.axhline(nominal, color=INK2, linewidth=1, linestyle="--")
+    ax.text(0.99, nominal, f"nominal {nominal:.0%}", fontsize=7, color=INK2,
+            va="bottom", ha="right", transform=ax.get_yaxis_transform())
+    ax.set_xlabel("difficulty quintile (hardest last)")
+    ax.set_ylabel("coverage")
+    ax.set_title("Coverage by difficulty", loc="left")
+    ax.set_xticks([1, 2, 3, 4, 5])
+    ax.legend(fontsize=7, loc="lower right")
+    ax.grid(axis="x", visible=False)
+
+    fig.tight_layout()
+    save(fig, "fig10_adaptive_conformal")
+
+
 def main() -> None:
     print("rendering figures from results/ ...")
     for fn in (fig_molnet, fig_active_learning, fig_conformal, fig_free_energy,
                fig_descriptors, fig_topology, fig_ricci, fig_gene_ontology,
-               fig_scaffold_split):
+               fig_scaffold_split, fig_adaptive_conformal):
         try:
             fn()
         except Exception as exc:                      # noqa: BLE001

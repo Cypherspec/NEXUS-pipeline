@@ -148,12 +148,68 @@ def generation_table() -> str:
         block = data.get(key)
         if not block:
             continue
-        rows.append(f"{esc(label)} & {100 * block['validity']:.1f}\\% & "
-                    f"{100 * block['uniqueness']:.1f}\\% & "
-                    f"{100 * block['novelty']:.1f}\\% \\\\")
-    return ("\\begin{tabular}{lrrr}\n\\toprule\nsampler & validity & uniqueness & "
-            "novelty \\\\\n\\midrule\n" + "\n".join(rows)
+        frag = block.get("validity_largest_fragment")
+        degree = block.get("mean_degree")
+        rows.append(
+            f"{esc(label)} & {100 * block['validity']:.1f}\\% & "
+            + (f"{100 * frag:.1f}\\%" if frag is not None else "--") + " & "
+            + (f"{degree:.2f}" if degree is not None else "--") + " & "
+            + f"{100 * block['uniqueness']:.1f}\\% & "
+            + f"{100 * block['novelty']:.1f}\\% \\\\")
+    train_degree = data.get("training_mean_degree")
+    note = ""
+    if train_degree is not None:
+        note = (f"\n\n\\noindent\\footnotesize Training-set mean degree is "
+                f"{train_degree:.2f}; a generator that collapses to the empty graph "
+                f"shows up here long before the validity column explains why.\n")
+    body = ("\\begin{tabular}{lrrrrr}\n\\toprule\nsampler & valid & "
+            "valid (largest frag.) & mean degree & unique & novel \\\\\n"
+            "\\midrule\n" + "\n".join(rows)
             + "\n\\bottomrule\n\\end{tabular}\n")
+    return body + note
+
+
+def rejection_table() -> str:
+    """Why samples were rejected -- the breakdown, not just the headline rate."""
+    data = load("generation.json")
+    block = (data or {}).get("model", {})
+    reasons = block.get("rejections")
+    if not reasons:
+        return ""
+    total = block.get("n_sampled", 0) or 1
+    order = sorted(reasons.items(), key=lambda kv: -kv[1])
+    rows = [f"{esc(k.replace('_', ' '))} & {v} & {100 * v / total:.1f}\\% \\\\"
+            for k, v in order]
+    return ("\\begin{tabular}{lrr}\n\\toprule\nrejected because & count & "
+            "share \\\\\n\\midrule\n" + "\n".join(rows)
+            + "\n\\bottomrule\n\\end{tabular}\n")
+
+
+def conformal_adaptive_table() -> str:
+    """Constant-width against adaptive conformal scores."""
+    data = load("conformal_adaptive.json")
+    if not data:
+        return "\\emph{Adaptive-interval benchmark not yet run.}\n"
+    pretty = {"standard": "constant width", "gp_sigma": "scaled by GP sd",
+              "residual_fitted": "fitted residual model"}
+    rows = []
+    for name, variants in data["datasets"].items():
+        first = True
+        for key, label in pretty.items():
+            entry = variants.get(key)
+            if not entry:
+                continue
+            rows.append(
+                f"{esc(name) if first else ''} & {esc(label)} & "
+                f"{entry['coverage']:.3f} & {entry['mean_width']:.2f} & "
+                f"{entry['width_spread']:.2f} & "
+                f"{entry['worst_quintile_coverage']:.3f} & "
+                f"{entry['conditional_spread']:.3f} \\\\")
+            first = False
+        rows.append("\\addlinespace")
+    return ("\\begin{tabular}{llrrrrr}\n\\toprule\ndataset & score & coverage & "
+            "width & width sd & worst quintile & spread \\\\\n\\midrule\n"
+            + "\n".join(rows) + "\n\\bottomrule\n\\end{tabular}\n")
 
 
 def descriptor_table() -> str:
@@ -287,7 +343,13 @@ the four Mantis store modules that supply the selected points.
 
 {screenshot_block('04_next_batch', 'Next-batch mode. The active-learning loop ranks the unmeasured molecules by expected improvement and proposes what to assay next, penalising similarity so one chemical series cannot consume the batch.')}
 
-{screenshot_block('06_dark_mode', 'Dark mode, which Mantis panels are expected to support.')}
+{screenshot_block('03b_property_space', 'The charts below the fold. Property space is logP against molecular weight, every point shaded by the descriptor driving the map colouring; the histogram beneath it is the logP distribution with its mean marked.')}
+
+{screenshot_block('03c_distributions', 'Scaffold families ranked by size, over the per-molecule table. The acyclic group dominating this selection is the same structure that broke the validation split, visible here directly.')}
+
+{screenshot_block('05b_interval_strip', 'Every prediction with its interval, sorted by predicted value. With the default constant-width score each interval is the same length --- which is what prompted the adaptive-width work in the previous section.')}
+
+{screenshot_block('06_light_mode', 'Light mode. Both themes are selected palettes validated against their own surface, not one inverted into the other.')}
 
 \section{{Property prediction}}
 
@@ -372,19 +434,71 @@ not as a replacement for a dedicated predictor.
 
 {figure_block('fig8_gene_ontology', 'Gene Ontology validation: positive controls recovered, false positives on random gene sets, and semantic similarity separating same-pathway from random gene pairs.')}
 
+\section{{Calibrated uncertainty, and whether width should adapt}}
+
+Split conformal with an absolute-residual score guarantees marginal coverage, but gives
+every molecule an interval of the same length. That is visible in the panel screenshot
+further up: a vertical stack of identical bars. It is valid and it is useless for triage,
+because it cannot say which predictions to trust. Scaling the score by a per-molecule
+difficulty estimate keeps the same guarantee and lets width vary.
+
+{conformal_adaptive_table()}
+
+\noindent Marginal coverage holds for every score, as the theory says it must --- that is
+the check, and it passes. The interesting column is the last one: how far conditional
+coverage drifts across difficulty quintiles. Constant-width intervals over-cover easy
+molecules and under-cover hard ones, which is precisely the failure adaptivity should
+repair, and on Lipo scaling by the GP posterior sd cuts that drift from 0.176 to 0.061
+while also narrowing the mean interval. On ESOL it makes it worse. Fitting a separate
+model to the residuals --- the textbook construction --- is worse than both on every
+dataset. So the adaptive score is offered as an option and left off by default, and the
+fitted-residual variant is reported as a negative result rather than shipped.
+
+{figure_block('fig10_adaptive_conformal', 'Left: mean interval width, labelled with the marginal coverage each score actually achieved. Right: coverage inside difficulty quintiles, averaged over datasets. Flat at the nominal level is the ideal; the constant-width score slopes down, and the fitted residual model swings from 0.72 to 1.00.')}
+
 \section{{Why scaffold splitting matters}}
 
 {figure_block('fig9_scaffold_leakage', 'A random split leaves most test molecules sharing a scaffold with the training set, which flatters any model. The scaffold split removes that leakage entirely.', '0.62\\linewidth')}
+
+\textbf{{A bug this benchmark was hiding.}} The balanced splitter could hand the
+validation set \emph{{nothing}}. FreeSolv is the case: its acyclic scaffold group is 320
+of 642 molecules, so it overflows the training quota, overflows the validation quota, and
+lands in test --- after which every remaining group still fits in training and validation
+is never reached. The split came out 0.50 / 0.00 / 0.50 rather than 0.60 / 0.20 / 0.20,
+which silently disabled early stopping and left half the dataset in test. Oversized groups
+are now assigned largest-first, so the one group too big for any held-out subset inflates
+training rather than test, and a rebalancing pass moves whole groups --- never splitting a
+scaffold --- into an undersized validation set. FreeSolv now splits 0.56 / 0.20 / 0.24.
+Results computed before this fix are not comparable with results after it, so the
+MoleculeNet table above was regenerated.
 
 \section{{De novo generation}}
 
 {generation_table()}
 
-\textbf{{A negative result, reported.}} The first generator reached only 3.0\% validity,
-\emph{{below}} its own 4.0\% marginal baseline: sampled bond matrices were far too dense,
-so valences blew up. Valence-constrained sampling and an eight-fold larger training set
-were added in response. The table above shows what that actually bought, including the
-ablation with the constraint switched off.
+\textbf{{Two bugs, found by a number that was impossible.}} The generator first scored
+0.0\% validity --- \emph{{below}} its own untrained marginal baseline. A trained model
+losing to its own control is not a weak result, it is a broken one, so it was traced
+rather than reported. Sampled graphs had mean degree 0.26 against a training-set mean of
+1.99: "no bond" is 83.7\% of atom pairs, so under an unweighted cross entropy the
+denoiser had learned to predict "none" everywhere. Separately, the valence-constrained
+sampler began reverse diffusion from the all-zero bond matrix instead of the marginal
+noise prior, and because the posterior's likelihood term anchors $x_{{t-1}}$ to $x_t$,
+starting empty dragged the whole trajectory back. With a class-balanced bond loss and the
+prior-initialised sampler, mean generated degree rises monotonically with the balancing
+exponent and validity follows it off the floor.
+
+\textbf{{What is still wrong.}} The table below is the honest account of where the
+remaining samples die. Valence errors are now rare --- the constraint handles them --- and
+almost every rejection is a graph in two or more pieces. The model has no connectivity
+prior, and nothing in the training objective supplies one.
+
+{rejection_table()}
+
+\noindent\footnotesize The generation hyperparameters were selected on this same
+validity metric, with no held-out set. That is the usual practice in the generative
+chemistry literature, and it is still a reason to read the number as an upper bound.
+\normalsize
 
 \section{{Integration with Mantis}}
 
