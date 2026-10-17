@@ -1,0 +1,37 @@
+\documentclass[10pt,twocolumn]{article}
+
+\usepackage[margin=0.72in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+\usepackage{caption}
+
+\graphicspath{{figures/}{screenshots/}}
+\captionsetup{font=small,labelfont=bf}
+\setlength{\parskip}{0pt}
+
+% Every quantity below is generated from results/ by benchmarks/paper_numbers.py.
+\input{numbers}
+
+\title{\vspace{-1.2em}\textbf{NEXUS}: a dependency-free drug-discovery pipeline,\\
+and an account of what it does and does not do}
+\author{Nischay Kommisetty}
+\date{}
+
+\begin{document}
+\maketitle
+
+\input{sections_abstract}
+\input{sections_intro}
+\input{sections_method}
+\input{sections_results}
+\input{sections_negative}
+\input{sections_discussion}
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}

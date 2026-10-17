@@ -1,0 +1,88 @@
+\section{Three failures worth reporting}
+\label{sec:negative}
+
+\subsection{A validation set with nothing in it}
+
+The scaffold splitter assigns whole scaffold groups to train, validation and test so
+no scaffold spans two subsets. On FreeSolv it assigned the validation set
+\emph{zero} molecules. The acyclic group --- every molecule with no ring shares the
+empty scaffold --- is 320 of 642 molecules. It overflows the training quota,
+overflows the validation quota, and lands in test; after that every remaining group
+still fits in training, so validation is never reached. The split came out
+$0.50 / 0.00 / 0.50$ instead of $0.60 / 0.20 / 0.20$, which silently disabled early
+stopping and left half the dataset in test.
+
+Nothing raised an error. The benchmark ran, produced plausible RMSEs, and wrote them
+to disk. The bug surfaced only because an unrelated experiment asked the splitter for
+a calibration set and got an empty array. Oversized groups are now assigned
+largest-first, so the group too large for any held-out subset inflates training
+rather than test, and a rebalancing pass moves whole groups into an undersized
+validation set. FreeSolv now splits $0.56 / 0.20 / 0.24$. Results computed before the
+fix are not comparable with results after it, and the MoleculeNet numbers in
+Section~\ref{sec:conformal} were regenerated.
+
+\subsection{A generator that lost to its own control}
+
+The graph diffusion model scored \genBaselineValidity{} validity --- and the
+untrained marginal baseline, which samples atoms and bonds from the dataset
+frequencies with no model at all, scored higher. A trained model losing to its own
+control is not a weak result; it is a broken one, and it was traced rather than
+written up.
+
+Two bugs, compounding. ``No bond'' is 83.7\% of atom pairs in a molecular graph, so
+under an unweighted cross entropy, predicting ``none'' everywhere is close to
+optimal; the denoiser had learned exactly that, producing graphs of mean degree
+$0.26$ against a training-set mean of \genTrainDegree{}. Separately, the
+valence-constrained sampler began reverse diffusion from the all-zero bond matrix
+rather than the marginal noise prior, and since the reverse posterior's likelihood
+term anchors $x_{t-1}$ to $x_t$, starting empty dragged the entire trajectory back
+towards empty.
+
+With a class-balanced bond loss (exponent \genClassBalance{}, bond weight
+\genBondWeight{}) and prior-initialised sampling, mean generated degree rises to
+\genModelDegree{} and strict validity to \genModelValidity{}, against
+\genBaselineValidity{} for the marginal baseline
+(Table~\ref{tab:generation}). Sampling the same trained model
+\emph{without} the valence constraint gives \genUnconstrainedValidity{} at mean
+degree \genUnconstrainedDegree{}, so the constraint is doing real work rather than
+masking a weak denoiser.
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{lrrr}
+\toprule
+sampler & valid & largest frag. & degree \\
+\midrule
+model + valence & \genModelValidity{} & \genModelFragment{} & \genModelDegree{} \\
+model, unconstrained & \genUnconstrainedValidity{} & \genUnconstrainedFragment{} & \genUnconstrainedDegree{} \\
+marginal baseline & \genBaselineValidity{} & \genBaselineFragment{} & \genBaselineDegree{} \\
+\midrule
+training set & --- & --- & \genTrainDegree{} \\
+\bottomrule
+\end{tabular}
+\caption{Generation. Two validity conventions are reported because the literature
+uses both: a single connected valence-correct molecule, and the largest connected
+fragment. Mean degree against the training mean is the diagnostic that exposed the
+collapse.}
+\label{tab:generation}
+\end{table}
+
+What remains wrong is specific: \genDisconnectedShare{} of samples are rejected for
+being in two or more pieces, against \genValenceShare{} for valence errors. The model
+has no connectivity prior and the training objective supplies none. That is the next
+thing to fix, and it is stated here rather than hidden behind the lenient
+fragment-validity convention. These hyperparameters were selected on the validity
+metric reported above, with no held-out set, so that figure should be read as an
+upper bound.
+
+\subsection{An improvement that did not improve}
+
+The standard construction for adaptive conformal intervals
+\cite{papadopoulos2011reliable} fits a separate model to the residuals and uses its
+prediction as the difficulty estimate. Implemented here --- an inner fold held out of
+training, a second Gaussian process regressed on $\log|r|$ --- it is worse than the
+constant-width baseline on every dataset tried: conditional-coverage drift of
+\confEsolResidSpread{} on ESOL, \confLipoResidSpread{} on Lipo and
+\confFreesolvResidSpread{} on FreeSolv, against \confEsolStdSpread{},
+\confLipoStdSpread{} and \confFreesolvStdSpread{} for doing nothing at all, with
+wider intervals throughout. It is reported, and not shipped.

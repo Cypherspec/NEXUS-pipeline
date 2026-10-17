@@ -1,0 +1,47 @@
+\section{Integration}
+
+The pipeline ships as a panel for Mantis, a map interface for exploring large
+collections. The panel reads the structures behind selected points, computes
+descriptors and scaffolds, colours the map by any of them, proposes the next batch to
+assay, and returns predictions with conformal intervals. No file in the Mantis
+repository is modified: three files are added and three short registrations are
+documented as exact diffs. Typechecked against the real Mantis tree with its own
+dependencies and path aliases, the panel contributes zero errors.
+
+\begin{figure}[t]
+\centering
+\fbox{\includegraphics[width=0.98\linewidth]{02_analyze_results}}
+\caption{The panel against the live service. Descriptors, scaffold families and the
+map colouring are computed by the NumPy package described here.}
+\end{figure}
+
+\section{Limitations}
+
+\begin{itemize}\itemsep1pt
+\item Every implementation here is slower than its established counterpart, often by
+      a large factor. Nothing in this work is a performance claim.
+\item The aromaticity and valence model is a documented subset, not a complete
+      perception engine. Molecules outside it are reported invalid rather than
+      guessed at.
+\item The generator produces disconnected graphs in the large majority of samples.
+      Fragment-validity hides this; strict validity does not, which is why both are
+      reported.
+\item Binding affinity is evaluated on one kinase panel. Cold-drug generalisation is
+      measured, but on a single assay family.
+\item Generation hyperparameters were selected on the reported metric with no
+      held-out set.
+\item Conformal guarantees are marginal. Conditional coverage is measured here
+      because the marginal guarantee alone can disguise systematic
+      over-confidence on the hardest cases, but no method here guarantees it.
+\end{itemize}
+
+\section{Conclusion}
+
+A dependency-free reimplementation is not a contribution in itself, and this paper
+does not argue otherwise. What the exercise produced was a set of checks tight enough
+to catch three failures that would otherwise have passed silently: a split that
+emptied a validation set, a generator beaten by its own control, and an interval that
+met its guarantee while carrying no information. Each was found by comparing a number
+against something external --- a published table, an untrained baseline, an
+analytically known answer --- rather than by reading code. That comparison is cheap,
+and it is the part of this work that generalises.

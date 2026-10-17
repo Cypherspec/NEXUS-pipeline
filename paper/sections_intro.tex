@@ -1,0 +1,44 @@
+\section{Introduction}
+
+Computational drug discovery runs on a deep software stack. RDKit parses the
+structures, scikit-learn or PyTorch fits the models, SciPy supplies the statistics,
+and a dozen smaller packages fill the gaps. The stack is excellent and nobody should
+rewrite it for production work. But it also means that a practitioner can run a
+screening campaign end to end without once being forced to confront what a Murcko
+scaffold is, where an aromaticity model draws its line, or what exactly a confidence
+interval from a Gaussian process guarantees. The abstractions are good enough to be
+used without being understood, and that is usually a virtue.
+
+NEXUS is the opposite exercise. It implements the pipeline against NumPy alone ---
+\codeLines{} lines of library code, \testLines{} lines of tests, \nTests{} tests ---
+specifically so that every modelling decision has to be made explicitly and can
+therefore be checked. SMILES parsing, ring perception and Hückel aromaticity;
+Bemis--Murcko scaffolds \cite{bemis1996properties}; Morgan fingerprints
+\cite{rogers2010extended} and Ertl TPSA \cite{ertl2000fast}; a tape-based
+reverse-mode autodiff engine and a directed message-passing network
+\cite{yang2019analyzing}; Gaussian-process active learning; split-conformal
+prediction \cite{vovk2005algorithmic,lei2018distribution}; Vietoris--Rips persistent
+homology \cite{edelsbrunner2002topological}; Ollivier--Ricci curvature
+\cite{ollivier2009ricci}; Jarzynski, Crooks and BAR free-energy estimators
+\cite{jarzynski1997nonequilibrium,crooks1999entropy,bennett1976efficient}; a discrete
+denoising diffusion model for molecular graphs
+\cite{austin2021structured,vignac2023digress}; and a Gene Ontology layer with
+information-theoretic semantic similarity \cite{ashburner2000gene,resnik1999semantic}.
+
+\paragraph{What this paper claims.}
+Not that these implementations are faster or more accurate than the established
+ones --- they are neither. The claim is narrower and, we think, more useful: that
+writing them out and validating each against an external reference exposes failures
+that a stack of trusted packages would have hidden. Three such failures are
+documented here. A scaffold splitter silently handed the validation set zero
+molecules on one dataset. A graph generator scored below its own untrained baseline
+because 83.7\% of atom pairs are ``no bond'' and the denoiser had learned to say so.
+A conformal interval attained exactly its guaranteed coverage while being the same
+width for every molecule, which is correct and nearly useless. None of these would
+have produced an error message.
+
+\paragraph{What this paper does not claim.}
+There is no state-of-the-art result here. Where a baseline beats the neural model,
+the table says so. Where an improvement fails to improve, the negative result is
+reported with the same prominence as the positive ones (Section~\ref{sec:negative}).
+Hyperparameters selected on a reported metric are flagged as such.

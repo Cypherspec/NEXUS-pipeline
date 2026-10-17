@@ -1,0 +1,52 @@
+\section{Method}
+
+\subsection{Chemistry core}
+
+Structures are parsed from an OpenSMILES subset into an explicit atom/bond graph.
+Rings are perceived by Horton's smallest-set-of-smallest-rings algorithm with
+independence checked over $\mathrm{GF}(2)$; aromaticity follows a Hückel $4n+2$ rule
+restricted by a conservative Kekulé pass, so a ring carrying an exocyclic double bond
+--- the carbonyl ring of caffeine is the canonical case --- is not aromatised.
+Implicit hydrogens follow a standard valence model, and a molecule that cannot
+satisfy it is reported as invalid rather than silently repaired.
+
+Descriptors are computed from this graph: molecular weight, heavy-atom and ring
+counts, rotatable bonds, hydrogen-bond donors and acceptors, fraction of sp$^3$
+carbon, Ertl topological polar surface area \cite{ertl2000fast}, and a Crippen-style
+logP. Morgan/ECFP fingerprints \cite{rogers2010extended} are hashed from iteratively
+refined atom environments. Scaffolds follow Bemis--Murcko \cite{bemis1996properties}.
+
+\subsection{Learning}
+
+A tape-based reverse-mode autodiff engine over NumPy arrays supplies gradients; every
+operation is checked against central finite differences. On top of it sits a directed
+message-passing network \cite{yang2019analyzing}, where messages live on directed
+bonds and the reverse bond is subtracted at each aggregation to stop a message
+returning along the edge it arrived on.
+
+Uncertainty is split-conformal \cite{vovk2005algorithmic,lei2018distribution}. The
+calibration quantile is the $\lceil (n+1)(1-\alpha) \rceil$-th order statistic of the
+calibration scores --- the finite-sample correction, not the empirical quantile at
+$1-\alpha$, which under-covers at small $n$. With an absolute-residual score every
+interval has identical width; scaling the score by a per-molecule difficulty estimate
+preserves the marginal guarantee while letting width vary, and
+Section~\ref{sec:conformal} measures whether that is worth doing.
+
+\subsection{Geometry, physics and generation}
+
+Conformers are embedded by distance geometry with triangle smoothing, then relaxed
+under an explicit out-of-plane term: distance restraints alone constrain planarity
+only to second order, and benzene puckers without it. Persistent homology is computed
+on the Vietoris--Rips filtration with a $\mathbb{Z}/2$ boundary-matrix reduction.
+Ollivier--Ricci curvature \cite{ollivier2009ricci} uses an exact transportation
+simplex rather than an entropic approximation.
+
+Free energies come from Jarzynski's equality, the Crooks fluctuation theorem and BAR
+\cite{jarzynski1997nonequilibrium,crooks1999entropy,bennett1976efficient}, with BAR
+solved in a form whose residual is monotone in $\Delta F$, so bisection is guaranteed
+to find the unique root.
+
+Generation is discrete denoising diffusion over atom and bond categories
+\cite{austin2021structured,vignac2023digress}, with marginal transition matrices and
+a cosine schedule. Reverse diffusion starts from the marginal noise prior; bond
+choices that would exceed an atom's valence are masked at every reverse step.

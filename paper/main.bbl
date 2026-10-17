@@ -1,0 +1,116 @@
+\begin{thebibliography}{10}
+
+\bibitem{ashburner2000gene}
+Michael Ashburner, Catherine~A. Ball, Judith~A. Blake, et~al.
+\newblock Gene ontology: Tool for the unification of biology.
+\newblock {\em Nature Genetics}, 25(1):25--29, 2000.
+
+\bibitem{austin2021structured}
+Jacob Austin, Daniel~D. Johnson, Jonathan Ho, Daniel Tarlow, and Rianne van~den
+  Berg.
+\newblock Structured denoising diffusion models in discrete state-spaces.
+\newblock In {\em Advances in Neural Information Processing Systems}, 2021.
+
+\bibitem{bemis1996properties}
+Guy~W. Bemis and Mark~A. Murcko.
+\newblock The properties of known drugs. 1. molecular frameworks.
+\newblock {\em Journal of Medicinal Chemistry}, 39(15):2887--2893, 1996.
+
+\bibitem{benjamini1995controlling}
+Yoav Benjamini and Yosef Hochberg.
+\newblock Controlling the false discovery rate.
+\newblock {\em Journal of the Royal Statistical Society B}, 57(1):289--300,
+  1995.
+
+\bibitem{bennett1976efficient}
+Charles~H. Bennett.
+\newblock Efficient estimation of free energy differences from monte carlo
+  data.
+\newblock {\em Journal of Computational Physics}, 22(2):245--268, 1976.
+
+\bibitem{crooks1999entropy}
+Gavin~E. Crooks.
+\newblock Entropy production fluctuation theorem and the nonequilibrium work
+  relation for free energy differences.
+\newblock {\em Physical Review E}, 60(3):2721--2726, 1999.
+
+\bibitem{davis2011comprehensive}
+Mindy~I. Davis, Jeremy~P. Hunt, Sanna Herrgard, et~al.
+\newblock Comprehensive analysis of kinase inhibitor selectivity.
+\newblock {\em Nature Biotechnology}, 29(11):1046--1051, 2011.
+
+\bibitem{edelsbrunner2002topological}
+Herbert Edelsbrunner, David Letscher, and Afra Zomorodian.
+\newblock Topological persistence and simplification.
+\newblock {\em Discrete \& Computational Geometry}, 28:511--533, 2002.
+
+\bibitem{ertl2000fast}
+Peter Ertl, Bernhard Rohde, and Paul Selzer.
+\newblock Fast calculation of molecular polar surface area as a sum of
+  fragment-based contributions.
+\newblock {\em Journal of Medicinal Chemistry}, 43(20):3714--3717, 2000.
+
+\bibitem{jarzynski1997nonequilibrium}
+Christopher Jarzynski.
+\newblock Nonequilibrium equality for free energy differences.
+\newblock {\em Physical Review Letters}, 78(14):2690--2693, 1997.
+
+\bibitem{lei2018distribution}
+Jing Lei, Max G'Sell, Alessandro Rinaldo, Ryan~J. Tibshirani, and Larry
+  Wasserman.
+\newblock Distribution-free predictive inference for regression.
+\newblock {\em Journal of the American Statistical Association},
+  113(523):1094--1111, 2018.
+
+\bibitem{ollivier2009ricci}
+Yann Ollivier.
+\newblock Ricci curvature of markov chains on metric spaces.
+\newblock {\em Journal of Functional Analysis}, 256(3):810--864, 2009.
+
+\bibitem{ozturk2018deepdta}
+Hakime {\"O}zt{\"u}rk, Arzucan {\"O}zg{\"u}r, and Elif Ozkirimli.
+\newblock Deepdta: Deep drug-target binding affinity prediction.
+\newblock {\em Bioinformatics}, 34(17):i821--i829, 2018.
+
+\bibitem{papadopoulos2011reliable}
+Harris Papadopoulos.
+\newblock Reliable probability estimates based on support vector machines for
+  large multiclass datasets.
+\newblock {\em Artificial Intelligence Applications and Innovations}, 2011.
+
+\bibitem{resnik1999semantic}
+Philip Resnik.
+\newblock Semantic similarity in a taxonomy.
+\newblock {\em Journal of Artificial Intelligence Research}, 11:95--130, 1999.
+
+\bibitem{rogers2010extended}
+David Rogers and Mathew Hahn.
+\newblock Extended-connectivity fingerprints.
+\newblock {\em Journal of Chemical Information and Modeling}, 50(5):742--754,
+  2010.
+
+\bibitem{vignac2023digress}
+Clement Vignac, Igor Krawczuk, Antoine Siraudin, Bohan Wang, Volkan Cevher, and
+  Pascal Frossard.
+\newblock Digress: Discrete denoising diffusion for graph generation.
+\newblock In {\em International Conference on Learning Representations}, 2023.
+
+\bibitem{vovk2005algorithmic}
+Vladimir Vovk, Alexander Gammerman, and Glenn Shafer.
+\newblock Algorithmic learning in a random world.
+\newblock Springer, 2005.
+
+\bibitem{wu2018moleculenet}
+Zhenqin Wu, Bharath Ramsundar, Evan~N. Feinberg, Joseph Gomes, Caleb Geniesse,
+  Aneesh~S. Pappu, Karl Leswing, and Vijay Pande.
+\newblock Moleculenet: A benchmark for molecular machine learning.
+\newblock {\em Chemical Science}, 9(2):513--530, 2018.
+
+\bibitem{yang2019analyzing}
+Kevin Yang, Kyle Swanson, Wengong Jin, Connor Coley, Philipp Eiden, Hua Gao,
+  Angel Guzman-Perez, Timothy Hopper, Brian Kelley, Miriam Mathea, et~al.
+\newblock Analyzing learned molecular representations for property prediction.
+\newblock {\em Journal of Chemical Information and Modeling}, 59(8):3370--3388,
+  2019.
+
+\end{thebibliography}

@@ -1,0 +1,89 @@
+\section{Results}
+
+Every number in this section is generated from a file in \texttt{results/} by
+\texttt{benchmarks/paper\_numbers.py}; none is typed into the text. Figures are
+rendered from the same files.
+
+\subsection{Component validation}
+
+Each component is checked against an external reference before it is used for
+anything. Descriptors are compared against reference columns distributed with the
+benchmark datasets, over \descriptorMolecules{} molecules, with the best agreement
+reaching \descriptorBest{} exact. Free-energy estimators are run on an analytically
+solvable switching problem where $\Delta F$ is known in closed form. Persistent
+homology is run on point clouds of known topology --- a circle must yield exactly one
+long-lived $H_1$ feature, acyclic octane none. Every autodiff operation is checked
+against central finite differences. The Gene Ontology layer loads \goTerms{} terms
+and \goAnnotations{} annotations, recovers known pathway enrichments as positive
+controls, and on \goFpTrials{} random gene sets of \goFpGenes{} genes returns a mean
+of \goFpMeanTerms{} significant terms, with any hit at all in \goFpAnyHit{} of trials
+--- the false-positive behaviour the Benjamini--Hochberg procedure
+\cite{benjamini1995controlling} promises.
+
+\subsection{Property prediction}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{fig1_molnet_benchmark}
+\caption{MoleculeNet \cite{wu2018moleculenet} under scaffold-balanced splits
+\cite{yang2019analyzing}, three seeds, with seed-to-seed spread. The neural model is
+competitive but not dominant.}
+\label{fig:molnet}
+\end{figure}
+
+The D-MPNN reproduces published numbers under the same protocol: BACE
+\molnetBaceDMpnn{} against a published 0.857, BBBP \molnetBbbpDMpnn{} against
+0.913, ClinTox \molnetClintoxDMpnn{} against 0.897
+\cite{yang2019analyzing}. That is the check that the implementation is right.
+
+It is not the headline. On BACE a plain ECFP-plus-descriptor random forest reaches
+\molnetBaceEcfpDescriptorsRf{}, and on BBBP an ECFP random forest reaches
+\molnetBbbpEcfpRf{} --- both ahead of the message-passing network, on datasets of one
+to two thousand molecules. The neural model wins on ClinTox
+(\molnetClintoxDMpnn{} against \molnetClintoxEcfpRf{}). This is the expected
+regime behaviour at these dataset sizes, and it is reported because the alternative
+--- quoting only the dataset where the fancier model wins --- is how benchmark tables
+become untrustworthy.
+
+\subsection{Binding affinity}
+
+On the Davis kinase panel \cite{davis2011comprehensive}, \affinityPairs{} measured
+pairs over \affinityDrugs{} drugs and \affinityTargets{} targets, a random split
+gives concordance index \affinityRandomCi{} and Pearson \affinityRandomPearson{},
+against roughly 0.878 for DeepDTA on the same dataset \cite{ozturk2018deepdta}.
+
+The number that matters for prospective use is the other one. Held out by
+\emph{drug} --- the realistic case, where the compound has never been assayed against
+anything --- concordance falls to \affinityColddrugCi{} and Pearson to
+\affinityColddrugPearson{}. Held out by target it falls less far, to
+\affinityColdtargetCi{}. A random split on an interaction matrix measures
+interpolation between known drug--target pairs, not the generalisation a screening
+campaign actually needs, and the gap between \affinityRandomCi{} and
+\affinityColddrugCi{} is the size of that distinction.
+
+\subsection{Calibrated uncertainty}
+\label{sec:conformal}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{fig10_adaptive_conformal}
+\caption{Left: mean interval width, labelled with the marginal coverage each score
+achieved. Right: coverage within difficulty quintiles. Flat at nominal is ideal.}
+\label{fig:adaptive}
+\end{figure}
+
+Conformal intervals hit their guarantee. At a nominal \conformalNominal{}, measured
+coverage over \conformalSeeds{} seeds is \confEsolStdCov{} on ESOL,
+\confLipoStdCov{} on Lipo and \confFreesolvStdCov{} on FreeSolv. The FreeSolv figure
+is over-coverage, not a failure: the guarantee is one-sided.
+
+The interesting question is width. With the default score every molecule receives an
+interval of the same length, which cannot distinguish a confident prediction from a
+guess. Conditional coverage shows the cost: on Lipo, coverage drifts by
+\confLipoStdSpread{} across difficulty quintiles --- over-covering easy molecules and
+under-covering hard ones. Scaling the nonconformity score by the Gaussian-process
+posterior standard deviation cuts that drift to \confLipoSigmaSpread{} and narrows
+the mean interval from \confLipoStdWidth{} to \confLipoSigmaWidth{}, at unchanged
+marginal coverage (\confLipoSigmaCov{}). On ESOL the same change makes conditional
+coverage \emph{worse}, from \confEsolStdSpread{} to \confEsolSigmaSpread{}. The
+adaptive score is therefore offered as an option and left off by default.
