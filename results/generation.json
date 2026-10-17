@@ -1,30 +1,59 @@
 {
   "n_training_molecules": 6266,
   "max_atoms": 18,
-  "training_steps": 25000,
-  "diffusion_steps": 50,
-  "final_loss": 1.021059686141512,
-  "train_seconds": 520.7,
-  "sample_seconds": 652.3,
+  "training_steps": 400,
+  "diffusion_steps": 20,
+  "final_loss": 4.0505868189214915,
+  "train_seconds": 82.1,
+  "sample_seconds": 46.7,
+  "class_balance": 1.5,
+  "bond_weight": 3.0,
+  "batch_size": 8,
+  "training_mean_degree": 1.98568893474758,
   "model": {
-    "n_sampled": 200,
-    "validity": 0.0,
-    "uniqueness": 0.0,
-    "novelty": 0.0
+    "n_sampled": 24,
+    "validity": 0.2916666666666667,
+    "validity_largest_fragment": 1.0,
+    "uniqueness": 1.0,
+    "novelty": 1.0,
+    "mean_degree": 1.8588856609077198,
+    "rejections": {
+      "disconnected": 17
+    },
+    "fragment_uniqueness": 1.0
   },
   "model_unconstrained_sampling": {
-    "n_sampled": 100,
+    "n_sampled": 24,
     "validity": 0.0,
+    "validity_largest_fragment": 0.0,
     "uniqueness": 0.0,
-    "novelty": 0.0
+    "novelty": 0.0,
+    "mean_degree": 4.874259992458522,
+    "rejections": {
+      "valence": 24
+    },
+    "fragment_uniqueness": 0.0
   },
   "marginal_baseline": {
-    "n_sampled": 200,
-    "validity": 0.02,
-    "uniqueness": 1.0,
-    "novelty": 1.0
+    "n_sampled": 24,
+    "validity": 0.0,
+    "validity_largest_fragment": 0.4583333333333333,
+    "uniqueness": 0.0,
+    "novelty": 0.0,
+    "mean_degree": 1.8258263182895533,
+    "rejections": {
+      "valence": 13,
+      "disconnected": 11
+    },
+    "fragment_uniqueness": 0.9090909090909091
   },
-  "properties_generated": {},
+  "properties_generated": {
+    "mean_atoms": 10.0,
+    "mean_mw": 137.378,
+    "mean_rings": 3.142857142857143,
+    "mean_tpsa": 12.282857142857143,
+    "mean_drug_likeness": 0.4166366863643716
+  },
   "properties_training": {
     "mean_atoms": 12.180657516757101,
     "mean_mw": 181.43768432812,
@@ -32,5 +61,39 @@
     "mean_tpsa": 41.560043089690396,
     "mean_drug_likeness": 0.5620739403337156
   },
-  "example_smiles": []
+  "example_smiles": [
+    "c12c3c4cc5ccc1c(c3c2c4)c5",
+    "n(c)C",
+    "c1cc1-c2c=Cc2",
+    "C1c2c3cs4c3c4c(C)c12",
+    "c12c3c(n(c1-c(c)cC)F)cc4noc2c34",
+    "C1(=C(c2c3c2C1c3)N)Cl",
+    "oc-1cc-2C3(c4c-1c(C3)c4c-2)C"
+  ],
+  "example_fragment_smiles": [
+    "c12c3c4cc5ccc1c(c3c2c4)c5",
+    "ClC(c(nc)C(C)=O)CCcc=O",
+    "c(o)c1-ccc(C=cc1)N",
+    "c1(Cc1)C",
+    "n(c)C",
+    "C=CC(C)C",
+    "c1C2C(CCC)=cc12",
+    "ClNC",
+    "c1c2c(CCN)c12",
+    "c(c)cc",
+    "c1cc1-c2c=Cc2",
+    "c(c)(C=C)c(N)c(Br)c",
+    "C1c2c3cs4c3c4c(C)c12",
+    "c12c3c(n(c1-c(c)cC)F)cc4noc2c34",
+    "C123C=C3c(C1(C)Cl)c2",
+    "C(CC(O)=O)(C)=CCl",
+    "c1cc2c(c3cc23)n1",
+    "c1(o)-c2cc3c(c4C(=c1)c5c(c3nc5)c4)n2",
+    "C12c3c4CCc(c(-c1c)-c34)C2=O",
+    "C1(=C(c2c3c2C1c3)N)Cl",
+    "oc-1cc-2C3(c4c-1c(C3)c4c-2)C",
+    "n1c2cc3c4c1cc3cc24",
+    "Cl",
+    "oc1OC2c3c(c1)c23"
+  ]
 }

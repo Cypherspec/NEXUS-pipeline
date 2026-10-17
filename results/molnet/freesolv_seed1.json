@@ -12,40 +12,40 @@
   "methods": {
     "ECFP + RF": {
       "test_score": 1.7872648352737197,
-      "seconds": 13.9
+      "seconds": 26.4
     },
     "ECFP + linear": {
       "test_score": 1.8550997580047546,
-      "seconds": 0.0
+      "seconds": 0.3
     },
     "descriptors + RF": {
       "test_score": 1.491850289340539,
-      "seconds": 2.0
+      "seconds": 2.5
     },
     "descriptors + linear": {
       "test_score": 2.126470831826047,
-      "seconds": 0.0
+      "seconds": 0.2
     },
     "ECFP+descriptors + RF": {
       "test_score": 1.4439727817119818,
-      "seconds": 10.1
+      "seconds": 15.7
     },
     "ECFP+descriptors + linear": {
       "test_score": 1.766574064174987,
-      "seconds": 0.1
+      "seconds": 0.3
     },
     "D-MPNN": {
       "test_score": 1.9484722563284,
       "valid_score": 1.3225834551862297,
       "best_epoch": 68,
-      "seconds": 47.3,
+      "seconds": 83.6,
       "n_parameters": 62721
     },
     "D-MPNN + descriptors": {
       "test_score": 1.9578271115352888,
       "valid_score": 1.4233904135771953,
       "best_epoch": 37,
-      "seconds": 27.9,
+      "seconds": 50.9,
       "n_parameters": 65793
     }
   }
