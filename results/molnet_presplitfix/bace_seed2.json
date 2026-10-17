@@ -1,0 +1,52 @@
+{
+  "dataset": "bace",
+  "seed": 2,
+  "task_type": "classification",
+  "metric": "roc_auc",
+  "n_total": 1513,
+  "n_train": 1210,
+  "n_valid": 151,
+  "n_test": 152,
+  "n_tasks": 1,
+  "scaffold_leakage_test": 0.0,
+  "methods": {
+    "ECFP + RF": {
+      "test_score": 0.8874289772727273,
+      "seconds": 3.3
+    },
+    "ECFP + linear": {
+      "test_score": 0.8751775568181818,
+      "seconds": 0.1
+    },
+    "descriptors + RF": {
+      "test_score": 0.8472123579545454,
+      "seconds": 0.8
+    },
+    "descriptors + linear": {
+      "test_score": 0.7794744318181818,
+      "seconds": 0.0
+    },
+    "ECFP+descriptors + RF": {
+      "test_score": 0.8905362215909091,
+      "seconds": 1.6
+    },
+    "ECFP+descriptors + linear": {
+      "test_score": 0.875,
+      "seconds": 0.2
+    },
+    "D-MPNN": {
+      "test_score": 0.8419744318181818,
+      "valid_score": 0.9170274170274171,
+      "best_epoch": 72,
+      "seconds": 224.2,
+      "n_parameters": 62721
+    },
+    "D-MPNN + descriptors": {
+      "test_score": 0.8922230113636364,
+      "valid_score": 0.9136002886002886,
+      "best_epoch": 67,
+      "seconds": 222.5,
+      "n_parameters": 65793
+    }
+  }
+}

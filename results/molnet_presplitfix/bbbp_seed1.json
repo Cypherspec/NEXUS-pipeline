@@ -1,0 +1,52 @@
+{
+  "dataset": "bbbp",
+  "seed": 1,
+  "task_type": "classification",
+  "metric": "roc_auc",
+  "n_total": 2050,
+  "n_train": 1640,
+  "n_valid": 205,
+  "n_test": 205,
+  "n_tasks": 1,
+  "scaffold_leakage_test": 0.0,
+  "methods": {
+    "ECFP + RF": {
+      "test_score": 0.9201680672268907,
+      "seconds": 3.5
+    },
+    "ECFP + linear": {
+      "test_score": 0.899668958492488,
+      "seconds": 0.1
+    },
+    "descriptors + RF": {
+      "test_score": 0.873694932518462,
+      "seconds": 1.0
+    },
+    "descriptors + linear": {
+      "test_score": 0.8416093710211358,
+      "seconds": 0.0
+    },
+    "ECFP+descriptors + RF": {
+      "test_score": 0.9094728800611154,
+      "seconds": 2.4
+    },
+    "ECFP+descriptors + linear": {
+      "test_score": 0.9010695187165776,
+      "seconds": 0.2
+    },
+    "D-MPNN": {
+      "test_score": 0.9032340208810797,
+      "valid_score": 0.8992380952380953,
+      "best_epoch": 16,
+      "seconds": 88.4,
+      "n_parameters": 62721
+    },
+    "D-MPNN + descriptors": {
+      "test_score": 0.8852813852813853,
+      "valid_score": 0.8956190476190476,
+      "best_epoch": 29,
+      "seconds": 124.8,
+      "n_parameters": 65793
+    }
+  }
+}

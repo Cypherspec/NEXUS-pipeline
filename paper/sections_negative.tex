@@ -18,8 +18,10 @@ a calibration set and got an empty array. Oversized groups are now assigned
 largest-first, so the group too large for any held-out subset inflates training
 rather than test, and a rebalancing pass moves whole groups into an undersized
 validation set. FreeSolv now splits $0.56 / 0.20 / 0.24$. Results computed before the
-fix are not comparable with results after it, and the MoleculeNet numbers in
-Section~\ref{sec:conformal} were regenerated.
+fix are not comparable with results after it. The MoleculeNet benchmark in
+Section~\ref{sec:molnet} is therefore being regenerated under the corrected
+splitter; the pre-fix outputs are kept in \texttt{results/molnet\_presplitfix/} so
+the two can be compared rather than quietly replaced.
 
 \subsection{A generator that lost to its own control}
 

@@ -1,0 +1,52 @@
+{
+  "dataset": "freesolv",
+  "seed": 2,
+  "task_type": "regression",
+  "metric": "rmse",
+  "n_total": 642,
+  "n_train": 513,
+  "n_valid": 64,
+  "n_test": 65,
+  "n_tasks": 1,
+  "scaffold_leakage_test": 0.0,
+  "methods": {
+    "ECFP + RF": {
+      "test_score": 5.717668073831482,
+      "seconds": 12.7
+    },
+    "ECFP + linear": {
+      "test_score": 5.0074112867580185,
+      "seconds": 0.1
+    },
+    "descriptors + RF": {
+      "test_score": 3.101973627571912,
+      "seconds": 2.0
+    },
+    "descriptors + linear": {
+      "test_score": 2.13422186214878,
+      "seconds": 0.0
+    },
+    "ECFP+descriptors + RF": {
+      "test_score": 3.3551667954426656,
+      "seconds": 10.3
+    },
+    "ECFP+descriptors + linear": {
+      "test_score": 1.9488726625447543,
+      "seconds": 0.1
+    },
+    "D-MPNN": {
+      "test_score": 2.2143426571517484,
+      "valid_score": 1.1991939725602332,
+      "best_epoch": 27,
+      "seconds": 24.0,
+      "n_parameters": 62721
+    },
+    "D-MPNN + descriptors": {
+      "test_score": 2.189996787582327,
+      "valid_score": 1.6659814668530233,
+      "best_epoch": 43,
+      "seconds": 32.4,
+      "n_parameters": 65793
+    }
+  }
+}
