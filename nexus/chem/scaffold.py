@@ -133,20 +133,29 @@ def scaffold_split(
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Split indices so that no scaffold appears in more than one subset.
 
-    `balanced=True` assigns the largest scaffold groups to the training set
-    first (the deterministic MoleculeNet convention); otherwise groups are
-    shuffled before assignment.
+    balanced=True (default) puts scaffold groups larger than half the
+    validation set into training, then shuffles the remaining small groups
+    before filling train/valid/test. This is the "scaffold balanced" scheme of
+    Yang et al. (2019). The deterministic largest-first alternative
+    (balanced=False) is reproducible but can leave the held-out sets
+    single-class on datasets such as BACE and BBBP, where activity is strongly
+    scaffold-correlated, which makes ROC-AUC undefined.
     """
     groups = scaffold_groups(mols, generic=generic)
     sets = list(groups.values())
-    if balanced:
-        sets.sort(key=lambda g: (-len(g), g[0]))
-    else:
-        rng = np.random.default_rng(seed)
-        rng.shuffle(sets)
-
     n = len(mols)
     n_train, n_valid = int(frac_train * n), int(frac_valid * n)
+
+    if balanced:
+        cutoff = n_valid / 2
+        big = [g for g in sets if len(g) > cutoff]
+        small = [g for g in sets if len(g) <= cutoff]
+        rng = np.random.default_rng(seed)
+        rng.shuffle(small)
+        sets = big + small
+    else:
+        sets.sort(key=lambda g: (-len(g), g[0]))
+
     train, valid, test = [], [], []
     for group in sets:
         if len(train) + len(group) <= n_train:

@@ -18,6 +18,10 @@ import numpy as np
 ArrayLike = "np.ndarray | float | int | Tensor"
 
 
+def _noop() -> None:
+    """Placeholder installed on freed graph nodes."""
+
+
 def _unbroadcast(grad: np.ndarray, shape: tuple[int, ...]) -> np.ndarray:
     """Sum a gradient back to `shape`, undoing NumPy broadcasting."""
     if grad.shape == shape:
@@ -81,8 +85,16 @@ class Tensor:
         else:
             self.grad += g
 
-    def backward(self, gradient: np.ndarray | None = None) -> None:
-        """Backpropagate from this tensor (a scalar unless `gradient` is given)."""
+    def backward(self, gradient: np.ndarray | None = None,
+                 retain_graph: bool = False) -> None:
+        """Backpropagate from this tensor (a scalar unless `gradient` is given).
+
+        Each operation's backward closure captures its own output tensor, so the
+        graph contains reference cycles that Python frees only on a garbage
+        collection pass. Unless `retain_graph` is set, the graph is released
+        explicitly once gradients are computed, which keeps memory flat across
+        long training runs instead of growing until the process is killed.
+        """
         if gradient is None:
             if self.data.size != 1:
                 raise RuntimeError(
@@ -106,6 +118,10 @@ class Tensor:
         self._accumulate(np.asarray(gradient, dtype=np.float64))
         for node in reversed(topo):
             node._backward()
+        if not retain_graph:
+            for node in topo:
+                node._backward = _noop
+                node._prev = ()
 
     # ------------------------------------------------------------- arithmetic
 
