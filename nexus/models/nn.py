@@ -324,6 +324,24 @@ def cross_entropy(logits: Tensor, target: np.ndarray) -> Tensor:
     return -log_probs[rows, idx].mean()
 
 
+def weighted_cross_entropy(logits: Tensor, target: np.ndarray,
+                           weights: np.ndarray) -> Tensor:
+    """Cross entropy with a per-example weight, normalised by the weight sum.
+
+    Used for the bond loss of the graph diffusion model, where "no bond" is
+    about 84% of atom pairs. Unweighted, predicting "none" everywhere is close
+    to optimal and the denoiser collapses onto it, emitting empty graphs.
+    """
+    log_probs = logits.log_softmax(axis=-1)
+    idx = np.asarray(target, dtype=np.int64)
+    rows = np.arange(len(idx))
+    w = np.asarray(weights, dtype=float)
+    total = float(w.sum())
+    if total <= 0.0:
+        return -log_probs[rows, idx].mean()
+    return -(log_probs[rows, idx] * w).sum() / total
+
+
 def kl_divergence_standard_normal(mu: Tensor, log_var: Tensor) -> Tensor:
     """KL(N(mu, sigma^2) || N(0, 1)), summed over features and averaged over rows."""
     return (((mu * mu) + log_var.exp() - 1.0 - log_var) * 0.5).sum(axis=-1).mean()

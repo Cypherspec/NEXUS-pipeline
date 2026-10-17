@@ -225,3 +225,78 @@ def test_ddpm_loss_is_finite_and_differentiable():
     assert np.isfinite(float(loss.data))
     loss.backward()
     assert any(p.grad is not None for p in model.model.parameters())
+
+
+def test_bond_class_weights_rebalance_without_changing_loss_scale():
+    """Rare bond types get upweighted, but the mean weight stays 1.
+
+    Unweighted, "no bond" is ~84% of atom pairs in a molecular graph, so
+    predicting "none" everywhere is near-optimal and the denoiser collapses
+    onto the empty graph.
+    """
+    graphs = [molecule_to_graph(parse_smiles(s))
+              for s in ("CCO", "CCC", "c1ccccc1", "CC(=O)O", "CC#N")]
+
+    unweighted = MoleculeDDPM(n_steps=5, hidden=8, depth=1, max_atoms=10,
+                              class_balance=0.0)
+    unweighted.fit_marginals(graphs)
+    np.testing.assert_allclose(unweighted.bond_class_weights, 1.0)
+
+    balanced = MoleculeDDPM(n_steps=5, hidden=8, depth=1, max_atoms=10,
+                            class_balance=1.0)
+    balanced.fit_marginals(graphs)
+    w, marginal = balanced.bond_class_weights, balanced.bond_marginal
+    # Normalisation: the expected weight under the bond marginal is 1, so the
+    # overall loss scale is untouched and only its balance changes.
+    assert float(np.dot(marginal, w)) == pytest.approx(1.0)
+    # The commonest class is downweighted relative to the rarest.
+    assert w[int(np.argmax(marginal))] < w[int(np.argmin(marginal))]
+
+
+def test_weighted_cross_entropy_matches_plain_when_weights_are_equal():
+    from nexus.models.autograd import Tensor
+    from nexus.models.nn import cross_entropy, weighted_cross_entropy
+
+    logits = Tensor(np.array([[2.0, -1.0, 0.5], [0.1, 0.3, -0.2]]),
+                    requires_grad=True)
+    target = np.array([0, 2])
+    plain = float(cross_entropy(logits, target).data)
+    equal = float(weighted_cross_entropy(logits, target, np.ones(2)).data)
+    assert equal == pytest.approx(plain)
+
+    # A weight of zero removes an example entirely.
+    only_first = float(weighted_cross_entropy(logits, target,
+                                              np.array([1.0, 0.0])).data)
+    single = float(cross_entropy(logits[:1], target[:1]).data)
+    assert only_first == pytest.approx(single)
+
+
+def test_sampling_starts_from_the_marginal_prior_not_the_empty_graph():
+    """Reverse diffusion must begin at the noise prior in both modes.
+
+    Starting the valence-constrained path from the all-zero bond matrix biases
+    every later step towards it, because the posterior's likelihood term
+    anchors x_{t-1} to x_t.
+    """
+    graphs = [molecule_to_graph(parse_smiles(s))
+              for s in ("CCO", "c1ccccc1", "CC(=O)O")]
+
+    for constrain in (True, False):
+        model = MoleculeDDPM(n_steps=5, hidden=8, depth=1, max_atoms=10, seed=0)
+        model.fit_marginals(graphs)
+        seen: list[np.ndarray] = []
+
+        class _Stop(Exception):
+            pass
+
+        def record(atoms, bonds, t, _seen=seen):
+            _seen.append(np.array(bonds, copy=True))
+            raise _Stop
+
+        model.model = record
+        with pytest.raises(_Stop):
+            model.sample(n_atoms=8, seed=3, constrain_valence=constrain)
+        initial = seen[0]
+        assert initial.shape == (8, 8)
+        assert initial.any(), (
+            f"constrain_valence={constrain} started from the empty graph")

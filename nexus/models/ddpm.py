@@ -14,7 +14,8 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from nexus.models.autograd import Tensor, concat
-from nexus.models.nn import Linear, Module, MLP, cross_entropy
+from nexus.models.nn import (Linear, Module, MLP, cross_entropy,
+                             weighted_cross_entropy)
 
 # Atom vocabulary for generation; index 0 is the "no atom" padding symbol.
 ATOM_VOCAB = ["<pad>", "C", "N", "O", "F", "S", "Cl", "Br"]
@@ -137,12 +138,15 @@ class MoleculeDDPM:
     depth: int = 3
     max_atoms: int = 24
     seed: int = 0
+    bond_weight: float = 1.0
+    class_balance: float = 0.5
 
     def __post_init__(self) -> None:
         self.model = GraphDenoiser(self.hidden, self.depth, self.seed)
         self.atom_marginal = np.ones(len(ATOM_VOCAB)) / len(ATOM_VOCAB)
         self.bond_marginal = np.ones(len(BOND_VOCAB)) / len(BOND_VOCAB)
         self.size_distribution = None
+        self.bond_class_weights = np.ones(len(BOND_VOCAB))
 
     def fit_marginals(self, graphs: list[tuple[np.ndarray, np.ndarray]]) -> None:
         """Estimate atom/bond type frequencies and the molecule-size distribution."""
@@ -161,6 +165,13 @@ class MoleculeDDPM:
         self.bond_marginal = (bond_counts + 1.0) / (bond_counts.sum() + len(bond_counts))
         self.atom_diffusion = DiscreteDiffusion(self.atom_marginal, self.n_steps)
         self.bond_diffusion = DiscreteDiffusion(self.bond_marginal, self.n_steps)
+        # Bond class weights f_c^-class_balance, clipped and renormalised so the
+        # mean weight under the bond marginal is 1 (the loss scale is unchanged,
+        # only its balance across classes). class_balance=0 leaves the loss
+        # unweighted; 1 equalises the classes outright.
+        w = self.bond_marginal ** (-float(self.class_balance))
+        w = np.clip(w, 0.1, 20.0)
+        self.bond_class_weights = w / float(np.dot(self.bond_marginal, w))
         counts = np.bincount(sizes, minlength=self.max_atoms + 1)[: self.max_atoms + 1]
         self.size_distribution = counts / counts.sum()
 
@@ -177,8 +188,10 @@ class MoleculeDDPM:
         atom_loss = cross_entropy(atom_logits, atoms)
         flat_logits = bond_logits.reshape(n * n, len(BOND_VOCAB))
         pair_index = iu[0] * n + iu[1]
-        bond_loss = cross_entropy(flat_logits[pair_index], bonds[iu])
-        return atom_loss + bond_loss
+        targets = bonds[iu]
+        bond_loss = weighted_cross_entropy(flat_logits[pair_index], targets,
+                                           self.bond_class_weights[targets])
+        return atom_loss + self.bond_weight * bond_loss
 
     def sample(self, n_atoms: int | None = None, seed: int = 0,
                constrain_valence: bool = True) -> tuple[np.ndarray, np.ndarray]:
@@ -194,12 +207,14 @@ class MoleculeDDPM:
         n_atoms = max(2, min(n_atoms, self.max_atoms))
 
         atoms = rng.choice(len(ATOM_VOCAB), size=n_atoms, p=self.atom_marginal)
-        bonds = np.zeros((n_atoms, n_atoms), dtype=int)
-        if not constrain_valence:
-            bonds = rng.choice(len(BOND_VOCAB), size=(n_atoms, n_atoms),
-                               p=self.bond_marginal)
-            bonds = np.triu(bonds, 1)
-            bonds = bonds + bonds.T
+        # Reverse diffusion must start from the noise prior, i.e. the marginal,
+        # in both modes. Starting the constrained path from the empty graph
+        # biases every later step towards it, because the posterior's
+        # likelihood term anchors x_{t-1} to x_t.
+        bonds = rng.choice(len(BOND_VOCAB), size=(n_atoms, n_atoms),
+                           p=self.bond_marginal)
+        bonds = np.triu(bonds, 1)
+        bonds = bonds + bonds.T
 
         for t in range(self.n_steps, 0, -1):
             atom_logits, bond_logits = self.model(atoms, bonds, t / self.n_steps)
