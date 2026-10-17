@@ -58,7 +58,7 @@ BUDGETS = {
     "clintox":  dict(epochs=80,  hidden=128, batch_size=50),
     "lipo":     dict(epochs=60,  hidden=128, batch_size=64),
     "tox21":    dict(epochs=40,  hidden=128, batch_size=64),
-    "hiv":      dict(epochs=15,  hidden=128, batch_size=128),
+    "hiv":      dict(epochs=8,   hidden=128, batch_size=256),
 }
 
 
@@ -173,8 +173,13 @@ def main() -> None:
     args = ap.parse_args()
 
     OUT.mkdir(parents=True, exist_ok=True)
+    # Smallest datasets first: with a fixed worker pool, starting on the
+    # largest ones leaves every result pending for hours.
+    sizes = {"freesolv": 642, "esol": 1128, "clintox": 1484, "bace": 1513,
+             "bbbp": 2050, "lipo": 4200, "tox21": 7831, "hiv": 41127}
     jobs = [(d, s) for d in args.datasets for s in range(args.seeds)
             if not (OUT / f"{d}_seed{s}.json").exists()]
+    jobs.sort(key=lambda j: (sizes.get(j[0], 10 ** 6), j[1]))
     print(f"{len(jobs)} runs to do ({len(args.datasets)} datasets x {args.seeds} seeds)")
 
     with ProcessPoolExecutor(args.workers) as pool:
