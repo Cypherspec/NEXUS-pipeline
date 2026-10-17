@@ -1,0 +1,30 @@
+{
+  "n_training_molecules": 786,
+  "max_atoms": 18,
+  "training_steps": 150,
+  "diffusion_steps": 20,
+  "final_loss": 1.5762041730171483,
+  "train_seconds": 4.8,
+  "sample_seconds": 1.2,
+  "model": {
+    "n_sampled": 20,
+    "validity": 0.0,
+    "uniqueness": 0.0,
+    "novelty": 0.0
+  },
+  "marginal_baseline": {
+    "n_sampled": 20,
+    "validity": 0.1,
+    "uniqueness": 1.0,
+    "novelty": 1.0
+  },
+  "properties_generated": {},
+  "properties_training": {
+    "mean_atoms": 10.311704834605598,
+    "mean_mw": 159.85635877862595,
+    "mean_rings": 0.9707379134860051,
+    "mean_tpsa": 24.63067430025445,
+    "mean_drug_likeness": 0.3557813289294846
+  },
+  "example_smiles": []
+}
