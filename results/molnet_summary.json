@@ -1,0 +1,164 @@
+{
+  "bace": {
+    "metric": "roc_auc",
+    "n_seeds": 3,
+    "n_total": 1513,
+    "n_tasks": 1,
+    "scaffold_leakage": 0.0,
+    "methods": {
+      "ECFP+descriptors + RF": {
+        "mean": 0.9055635030060132,
+        "std": 0.01066635854979529,
+        "n_seeds": 3
+      },
+      "ECFP+descriptors + linear": {
+        "mean": 0.9000465835236398,
+        "std": 0.018679432937252688,
+        "n_seeds": 3
+      },
+      "ECFP + linear": {
+        "mean": 0.8980126114052056,
+        "std": 0.01714921673407822,
+        "n_seeds": 3
+      },
+      "ECFP + RF": {
+        "mean": 0.8946777716809651,
+        "std": 0.005182339905810198,
+        "n_seeds": 3
+      },
+      "D-MPNN + descriptors": {
+        "mean": 0.8909927230309984,
+        "std": 0.010330671369909939,
+        "n_seeds": 3
+      },
+      "descriptors + RF": {
+        "mean": 0.8641203142924713,
+        "std": 0.02608300388798833,
+        "n_seeds": 3
+      },
+      "D-MPNN": {
+        "mean": 0.8526040097707391,
+        "std": 0.015224651426383443,
+        "n_seeds": 3
+      },
+      "descriptors + linear": {
+        "mean": 0.7753432445889894,
+        "std": 0.0037423970510808906,
+        "n_seeds": 3
+      }
+    },
+    "reference": {
+      "metric": "roc_auc",
+      "chemprop_dmpnn": 0.857,
+      "source": "Yang et al. 2019 (scaffold)"
+    }
+  },
+  "bbbp": {
+    "metric": "roc_auc",
+    "n_seeds": 3,
+    "n_total": 2050,
+    "n_tasks": 1,
+    "scaffold_leakage": 0.0,
+    "methods": {
+      "ECFP + RF": {
+        "mean": 0.9338651751860075,
+        "std": 0.011214146095883821,
+        "n_seeds": 3
+      },
+      "ECFP+descriptors + RF": {
+        "mean": 0.9248933470636277,
+        "std": 0.010911974689043013,
+        "n_seeds": 3
+      },
+      "ECFP+descriptors + linear": {
+        "mean": 0.9167467138510977,
+        "std": 0.011321486745508305,
+        "n_seeds": 3
+      },
+      "ECFP + linear": {
+        "mean": 0.9165620842697159,
+        "std": 0.012277500754546875,
+        "n_seeds": 3
+      },
+      "D-MPNN": {
+        "mean": 0.9108536547798085,
+        "std": 0.005612690904284258,
+        "n_seeds": 3
+      },
+      "descriptors + RF": {
+        "mean": 0.8907667593171708,
+        "std": 0.013928002964143768,
+        "n_seeds": 3
+      },
+      "D-MPNN + descriptors": {
+        "mean": 0.8907021619052008,
+        "std": 0.024646861147899813,
+        "n_seeds": 3
+      },
+      "descriptors + linear": {
+        "mean": 0.8441293949545443,
+        "std": 0.004417586778529916,
+        "n_seeds": 3
+      }
+    },
+    "reference": {
+      "metric": "roc_auc",
+      "chemprop_dmpnn": 0.913,
+      "source": "Yang et al. 2019 (scaffold)"
+    }
+  },
+  "clintox": {
+    "metric": "roc_auc",
+    "n_seeds": 3,
+    "n_total": 1484,
+    "n_tasks": 2,
+    "scaffold_leakage": 0.0,
+    "methods": {
+      "D-MPNN + descriptors": {
+        "mean": 0.8969300969666145,
+        "std": 0.062133809747179636,
+        "n_seeds": 3
+      },
+      "D-MPNN": {
+        "mean": 0.8961623829285507,
+        "std": 0.04123538763363886,
+        "n_seeds": 3
+      },
+      "ECFP+descriptors + linear": {
+        "mean": 0.8236255469298842,
+        "std": 0.04647558377291226,
+        "n_seeds": 3
+      },
+      "ECFP + linear": {
+        "mean": 0.7968972240420916,
+        "std": 0.03523130728706372,
+        "n_seeds": 3
+      },
+      "descriptors + RF": {
+        "mean": 0.7760278166882048,
+        "std": 0.017441583860404522,
+        "n_seeds": 3
+      },
+      "descriptors + linear": {
+        "mean": 0.7708658582500721,
+        "std": 0.1094765069337157,
+        "n_seeds": 3
+      },
+      "ECFP+descriptors + RF": {
+        "mean": 0.719227414029584,
+        "std": 0.03901762279322878,
+        "n_seeds": 3
+      },
+      "ECFP + RF": {
+        "mean": 0.6954146924369172,
+        "std": 0.05478523191970467,
+        "n_seeds": 3
+      }
+    },
+    "reference": {
+      "metric": "roc_auc",
+      "chemprop_dmpnn": 0.897,
+      "source": "Yang et al. 2019 (scaffold)"
+    }
+  }
+}
