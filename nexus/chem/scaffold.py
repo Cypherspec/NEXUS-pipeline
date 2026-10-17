@@ -148,7 +148,9 @@ def scaffold_split(
 
     if balanced:
         cutoff = n_valid / 2
-        big = [g for g in sets if len(g) > cutoff]
+        # Largest first within the big sets, so the one group too large for any
+        # held-out subset lands in training rather than inflating test.
+        big = sorted((g for g in sets if len(g) > cutoff), key=len, reverse=True)
         small = [g for g in sets if len(g) <= cutoff]
         rng = np.random.default_rng(seed)
         rng.shuffle(small)
@@ -156,15 +158,40 @@ def scaffold_split(
     else:
         sets.sort(key=lambda g: (-len(g), g[0]))
 
-    train, valid, test = [], [], []
+    train: list[list[int]] = []
+    valid: list[list[int]] = []
+    test: list[list[int]] = []
+    size = {id(train): 0, id(valid): 0, id(test): 0}
     for group in sets:
-        if len(train) + len(group) <= n_train:
-            train += group
-        elif len(valid) + len(group) <= n_valid:
-            valid += group
+        if size[id(train)] + len(group) <= n_train:
+            target = train
+        elif size[id(valid)] + len(group) <= n_valid:
+            target = valid
         else:
-            test += group
-    return np.array(sorted(train)), np.array(sorted(valid)), np.array(sorted(test))
+            target = test
+        target.append(group)
+        size[id(target)] += len(group)
+
+    # Greedy assignment can starve the validation set: a group larger than the
+    # validation target goes to test, and every later group still fits in
+    # train, so nothing is ever left over for valid. FreeSolv does exactly this
+    # -- its acyclic group is half the dataset. Rebalance by moving whole
+    # groups, which keeps every scaffold inside a single subset.
+    if size[id(valid)] < n_valid:
+        movable = sorted((g for g in train if len(g) <= n_valid - size[id(valid)]),
+                         key=len, reverse=True)
+        for group in movable:
+            if size[id(valid)] >= n_valid:
+                break
+            if len(group) > n_valid - size[id(valid)]:
+                continue
+            train.remove(group)
+            valid.append(group)
+            size[id(train)] -= len(group)
+            size[id(valid)] += len(group)
+
+    flat = lambda parts: np.array(sorted(i for group in parts for i in group), dtype=int)
+    return flat(train), flat(valid), flat(test)
 
 
 def random_split(n: int, frac_train: float = 0.8, frac_valid: float = 0.1,

@@ -223,13 +223,23 @@ def handle_predict(payload: dict) -> dict:
 
     rows = []
     if task == "regression":
-        conformal = ConformalRegressor(alpha=alpha).fit(mean_calib, y[calib_idx])
-        low, high = conformal.predict_interval(mean)
+        # With the default absolute-residual score every interval has the same
+        # width: valid, but it cannot say which predictions to trust. Setting
+        # `adaptive` scales the score by the GP posterior sd, which keeps the
+        # same marginal guarantee and lets width vary. Measured on ESOL,
+        # FreeSolv and Lipo it improves coverage in the hardest quintile on two
+        # of the three and leaves marginal coverage unchanged, so it is offered
+        # rather than imposed (see results/conformal_adaptive.json).
+        adaptive = bool(payload.get("adaptive", False))
+        conformal = ConformalRegressor(alpha=alpha, normalize=adaptive)
+        sigma_calib = std_calib if adaptive else None
+        conformal.fit(mean_calib, y[calib_idx], sigma_calib)
+        low, high = conformal.predict_interval(mean, std if adaptive else None)
         for k, idx in enumerate(target):
             rows.append({"smiles": smiles[idx], "prediction": float(mean[k]),
                          "std": float(std[k]), "interval_low": float(low[k]),
                          "interval_high": float(high[k])})
-        coverage_check = conformal.coverage(mean_calib, y[calib_idx])
+        coverage_check = conformal.coverage(mean_calib, y[calib_idx], sigma_calib)
     else:
         probs_calib = np.clip(np.c_[1 - mean_calib, mean_calib], 1e-6, 1 - 1e-6)
         probs = np.clip(np.c_[1 - mean, mean], 1e-6, 1 - 1e-6)
@@ -244,9 +254,14 @@ def handle_predict(payload: dict) -> dict:
         coverage_check = conformal.coverage(
             probs_calib / probs_calib.sum(1, keepdims=True), y[calib_idx].astype(int))
 
+    widths = [r["interval_high"] - r["interval_low"] for r in rows
+              if r.get("interval_high") is not None and r.get("interval_low") is not None]
     return {
         "task": task, "alpha": alpha, "nominal_coverage": 1 - alpha,
         "calibration_coverage": float(coverage_check),
+        "interval_mode": ("adaptive" if bool(payload.get("adaptive", False))
+                          else "constant-width") if task == "regression" else None,
+        "mean_interval_width": float(np.mean(widths)) if widths else None,
         "n_labelled": int(len(known)), "n_calibration": int(len(calib_idx)),
         "n_predicted": len(rows), "predictions": rows,
     }

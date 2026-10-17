@@ -96,6 +96,10 @@ export interface NexusPredictResponse {
     alpha: number;
     nominal_coverage: number;
     calibration_coverage: number;
+    /** Which conformal score produced the intervals; null for classification. */
+    interval_mode: 'constant-width' | 'adaptive' | null;
+    /** Mean interval width, or null when the task has no intervals. */
+    mean_interval_width: number | null;
     n_labelled: number;
     n_calibration: number;
     n_predicted: number;

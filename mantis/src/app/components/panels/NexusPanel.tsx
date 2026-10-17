@@ -1,11 +1,12 @@
 import {
     AlertTriangle,
+    Atom,
     Beaker,
     CheckCircle2,
-    FlaskConical,
+    Layers,
     Loader2,
-    Palette,
     RefreshCw,
+    Sparkles,
     Target,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -33,14 +34,25 @@ import {
     type NexusStrategy,
 } from '@/types/nexus';
 
+import {
+    CoverageBar,
+    Histogram,
+    IntervalStrip,
+    RampLegend,
+    RankedBars,
+    RuleDots,
+    ScatterPlot,
+    StatTile,
+    useNumberFormat,
+    type ScatterDatum,
+} from './nexus/charts';
+import { gradientText, nexusTheme, rampColor } from './nexus/theme';
+
 /** Layer this panel writes point colours into, so it only clears its own. */
 const COLOR_OWNER = 'nexus';
 
 /** Metadata keys searched, in order, for a structure string. */
 const SMILES_KEYS = ['smiles', 'SMILES', 'Smiles', 'canonical_smiles', 'structure', 'mol'];
-
-/** Sequential blue ramp, light to dark; one hue, as a magnitude scale should be. */
-const RAMP = ['#cde2fb', '#9ec5f4', '#6da7ec', '#3987e5', '#2a78d6', '#1c5cab', '#104281'];
 
 type Mode = 'analyze' | 'screen' | 'predict';
 type Phase = 'idle' | 'running' | 'done' | 'error';
@@ -60,34 +72,10 @@ function smilesOf(point: DataPoint): string | null {
     return null;
 }
 
-/**
- * Maps a value in [min, max] onto the sequential ramp.
- *
- * @param value Value to colour.
- * @param min Lower bound of the scale.
- * @param max Upper bound of the scale.
- * @returns A hex colour.
- */
-function rampColor(value: number, min: number, max: number): string {
-    if (!Number.isFinite(value) || max <= min) return RAMP[0];
-    const unit = Math.min(1, Math.max(0, (value - min) / (max - min)));
-    return RAMP[Math.min(RAMP.length - 1, Math.round(unit * (RAMP.length - 1)))];
-}
-
-/**
- * Formats a number for the compact result tables.
- *
- * @param value Number to format, possibly null.
- * @param digits Decimal places.
- * @returns A display string.
- */
-function fmt(value: number | null | undefined, digits = 2): string {
-    return value === null || value === undefined || !Number.isFinite(value)
-        ? '--' : value.toFixed(digits);
-}
-
 const NexusPanel: React.FC = () => {
     const { isDarkMode } = useDarkMode();
+    const theme = nexusTheme(isDarkMode);
+    const fmt = useNumberFormat();
     const mapId = useDataStore(s => s.map_id);
     const selected = useSelectionStore(s => s.selected) as DataPoint[];
 
@@ -105,14 +93,10 @@ const NexusPanel: React.FC = () => {
     const [strategy, setStrategy] = useState<NexusStrategy>('ei');
     const [batchSize, setBatchSize] = useState(24);
     const [labelColumn, setLabelColumn] = useState('');
+    const [adaptive, setAdaptive] = useState(false);
 
     const colouredIds = useRef<Set<string>>(new Set());
     const inFlight = useRef<AbortController | null>(null);
-
-    const muted = isDarkMode ? 'text-gray-400' : 'text-gray-500';
-    const border = isDarkMode ? 'border-gray-700' : 'border-gray-200';
-    const surface = isDarkMode ? 'bg-gray-900' : 'bg-white';
-    const subtle = isDarkMode ? 'bg-gray-800' : 'bg-gray-50';
 
     // Points carrying a structure, and the id each SMILES came from, so results
     // can be mapped back onto the map.
@@ -184,12 +168,12 @@ const NexusPanel: React.FC = () => {
         const max = Math.max(...numbers);
         const colours = new Map<string, string>();
         for (const { ids, value } of values) {
-            const colour = rampColor(value, min, max);
+            const colour = rampColor(value, min, max, theme.ramp);
             for (const id of ids) colours.set(id, colour);
         }
         usePointColorStore.getState().updateMultiplePointColors(colours, COLOR_OWNER);
         colouredIds.current = new Set(colours.keys());
-    }, [clearColours, pointBySmiles]);
+    }, [clearColours, pointBySmiles, theme.ramp]);
 
     const run = useCallback(async () => {
         if (structures.length === 0) return;
@@ -230,7 +214,7 @@ const NexusPanel: React.FC = () => {
                     return Number.isFinite(value) ? value : null;
                 });
                 setPrediction(await predictWithIntervals(structures, labels, 0.1,
-                    controller.signal));
+                    { adaptive }, controller.signal));
             }
             setPhase('done');
         } catch (e) {
@@ -238,67 +222,145 @@ const NexusPanel: React.FC = () => {
             setPhase('error');
             setError((e as Error).message);
         }
-    }, [batchSize, colourBy, labelColumn, mode, paint, pointBySmiles, selected,
-        strategy, structures]);
+    }, [adaptive, batchSize, colourBy, labelColumn, mode, paint, pointBySmiles,
+        selected, strategy, structures]);
 
     const onColourChange = useCallback((property: string) => {
         setColourBy(property);
         paint(property, analysis);
     }, [analysis, paint]);
 
+    // Derived views of the analysis, used by the charts.
+    const chem = useMemo(() => {
+        if (!analysis) return null;
+        const molecules = analysis.molecules;
+        const value = (key: string) => molecules
+            .map(m => m.descriptors[key])
+            .filter((v): v is number => v !== null && Number.isFinite(v));
+        const colourValues = molecules.map(m => m.descriptors[colourBy]);
+        const finite = colourValues.filter((v): v is number => v !== null && Number.isFinite(v));
+        const scatter: ScatterDatum[] = molecules
+            .filter(m => m.descriptors.mw !== null && m.descriptors.logp !== null)
+            .map(m => ({
+                x: m.descriptors.mw as number,
+                y: m.descriptors.logp as number,
+                label: m.formula,
+                colourValue: m.descriptors[colourBy] ?? undefined,
+            }));
+        const ro5Pass = molecules.filter(m => m.lipinski_violations <= 1).length;
+        const veberPass = molecules.filter(m => m.veber_pass).length;
+        const alertFree = molecules.filter(m => m.structural_alerts === 0).length;
+        return {
+            logp: value('logp'),
+            tpsa: value('tpsa'),
+            mw: value('mw'),
+            quality: value('drug_likeness'),
+            scatter,
+            colourMin: finite.length ? Math.min(...finite) : Number.NaN,
+            colourMax: finite.length ? Math.max(...finite) : Number.NaN,
+            ro5Rate: molecules.length ? ro5Pass / molecules.length : 0,
+            veberRate: molecules.length ? veberPass / molecules.length : 0,
+            alertRate: molecules.length ? alertFree / molecules.length : 0,
+        };
+    }, [analysis, colourBy]);
+
+    const scaffoldBars = useMemo(() => {
+        if (!scaffolds) return [];
+        return scaffolds.groups
+            .slice()
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 8)
+            .map(g => ({
+                label: g.scaffold || 'acyclic',
+                value: g.count,
+                sublabel: `${g.count} molecule${g.count === 1 ? '' : 's'} share this core`,
+            }));
+    }, [scaffolds]);
+
     const disabled = phase === 'running' || structures.length === 0;
+    const live = serviceVersion !== null;
+
+    const selectStyle = {
+        background: theme.surfaceInset,
+        borderColor: theme.line,
+        color: theme.text,
+    };
 
     return (
-        <div className={`flex h-full flex-col overflow-hidden ${surface}`}>
-            {/* Header */}
-            <div className={`flex items-center gap-2 border-b px-3 py-2 ${border}`}>
-                <FlaskConical className="h-4 w-4 text-blue-500" aria-hidden />
-                <span className="text-sm font-semibold">NEXUS</span>
-                <span className={`text-xs ${muted}`}>
-                    {serviceVersion ? `service v${serviceVersion}` : 'service offline'}
-                </span>
-                <span className={`ml-auto text-xs ${muted}`}>
-                    {structures.length} of {selected.length} selected point
-                    {selected.length === 1 ? '' : 's'} have structures
-                </span>
+        <div className="flex h-full flex-col overflow-hidden"
+            style={{ background: theme.bg, color: theme.text }}>
+
+            {/* Header: wordmark, what the service is, and whether it is reachable. */}
+            <div className="shrink-0 px-3 pb-2 pt-2.5"
+                style={{ borderBottom: `1px solid ${theme.line}`, background: theme.surface }}>
+                <div className="flex items-center gap-2">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-md"
+                        style={{ background: theme.surfaceInset, border: `1px solid ${theme.line}` }}>
+                        <Atom className="h-3.5 w-3.5" style={{ color: theme.accent }} aria-hidden />
+                    </div>
+                    <span className="text-[15px] font-semibold tracking-tight"
+                        style={gradientText(theme)}>NEXUS</span>
+                    <span className="flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] uppercase tracking-[0.12em]"
+                        style={{
+                            background: theme.surfaceInset,
+                            color: live ? theme.good : theme.text3,
+                            border: `1px solid ${theme.line}`,
+                        }}>
+                        <span className="inline-block h-1 w-1 rounded-full"
+                            style={{ background: live ? theme.good : theme.text3 }} aria-hidden />
+                        {live ? `v${serviceVersion}` : 'offline'}
+                    </span>
+                    <span className="ml-auto text-[10px] tabular-nums" style={{ color: theme.text3 }}>
+                        {structures.length}/{selected.length} with structures
+                    </span>
+                </div>
+                <p className="mt-1 text-[10px] leading-snug" style={{ color: theme.text3 }}>
+                    Non-equilibrium exploration with cross-modal unified synthesis
+                </p>
             </div>
 
-            {/* Mode switch */}
-            <div className={`flex gap-1 border-b px-3 py-2 ${border}`}>
-                {([['analyze', 'Analyze', Beaker],
-                   ['screen', 'Next batch', Target],
-                   ['predict', 'Predict', CheckCircle2]] as const).map(([key, label, Icon]) => (
-                    <button
-                        key={key}
-                        type="button"
-                        onClick={() => setMode(key)}
-                        className={`flex items-center gap-1 rounded px-2 py-1 text-xs transition-colors ${
-                            mode === key
-                                ? 'bg-blue-500 text-white'
-                                : isDarkMode
-                                    ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                    >
-                        <Icon className="h-3 w-3" aria-hidden />
-                        {label}
-                    </button>
-                ))}
+            {/* Mode switch, as a segmented control. */}
+            <div className="shrink-0 px-3 py-2" style={{ background: theme.surface }}>
+                <div className="flex gap-0.5 rounded-lg p-0.5"
+                    style={{ background: theme.surfaceInset, border: `1px solid ${theme.line}` }}>
+                    {([['analyze', 'Analyze', Beaker],
+                       ['screen', 'Next batch', Target],
+                       ['predict', 'Predict', CheckCircle2]] as const).map(([key, label, Icon]) => (
+                        <button
+                            key={key}
+                            type="button"
+                            onClick={() => setMode(key)}
+                            aria-pressed={mode === key}
+                            className="flex flex-1 items-center justify-center gap-1 rounded-md py-1 text-[11px] font-medium transition-colors"
+                            style={mode === key
+                                ? { background: theme.accent, color: '#ffffff' }
+                                : { color: theme.text2 }}
+                        >
+                            <Icon className="h-3 w-3" aria-hidden />
+                            {label}
+                        </button>
+                    ))}
+                </div>
             </div>
 
             {/* Controls */}
-            <div className={`space-y-2 border-b px-3 py-2 ${border}`}>
+            <div className="shrink-0 space-y-2 px-3 pb-2.5"
+                style={{ borderBottom: `1px solid ${theme.line}`, background: theme.surface }}>
                 {mode === 'screen' && (
-                    <div className="flex flex-wrap items-center gap-2 text-xs">
-                        <label className={muted} htmlFor="nexus-strategy">Strategy</label>
+                    <div className="flex flex-wrap items-center gap-2 text-[10px]">
+                        <label className="uppercase tracking-[0.12em]"
+                            style={{ color: theme.text3 }} htmlFor="nexus-strategy">Strategy</label>
                         <select
                             id="nexus-strategy"
                             value={strategy}
                             onChange={e => setStrategy(e.target.value as NexusStrategy)}
-                            className={`rounded border px-1 py-0.5 ${border} ${subtle}`}
+                            className="rounded-md border px-1.5 py-1 text-[10px]"
+                            style={selectStyle}
                         >
                             {NEXUS_STRATEGIES.map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
-                        <label className={muted} htmlFor="nexus-batch">Batch</label>
+                        <label className="uppercase tracking-[0.12em]"
+                            style={{ color: theme.text3 }} htmlFor="nexus-batch">Batch</label>
                         <input
                             id="nexus-batch"
                             type="number"
@@ -306,44 +368,58 @@ const NexusPanel: React.FC = () => {
                             max={500}
                             value={batchSize}
                             onChange={e => setBatchSize(Math.max(1, Number(e.target.value) || 1))}
-                            className={`w-16 rounded border px-1 py-0.5 ${border} ${subtle}`}
+                            className="w-14 rounded-md border px-1.5 py-1 text-[10px] tabular-nums"
+                            style={selectStyle}
                         />
                     </div>
                 )}
                 {(mode === 'screen' || mode === 'predict') && (
-                    <div className="flex flex-wrap items-center gap-2 text-xs">
-                        <label className={muted} htmlFor="nexus-label">
+                    <div className="flex flex-wrap items-center gap-2 text-[10px]">
+                        <label className="uppercase tracking-[0.12em]" style={{ color: theme.text3 }}
+                            htmlFor="nexus-label">
                             {mode === 'predict' ? 'Measured column' : 'Known results'}
                         </label>
                         <select
                             id="nexus-label"
                             value={labelColumn}
                             onChange={e => setLabelColumn(e.target.value)}
-                            className={`max-w-[12rem] rounded border px-1 py-0.5 ${border} ${subtle}`}
+                            className="max-w-[12rem] rounded-md border px-1.5 py-1 text-[10px]"
+                            style={selectStyle}
                         >
                             <option value="">{mode === 'predict' ? 'select a column' : 'none yet'}</option>
                             {numericColumns.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
+                        {mode === 'predict' && (
+                            <label className="flex items-center gap-1.5"
+                                style={{ color: theme.text3 }}>
+                                <input type="checkbox" checked={adaptive}
+                                    onChange={e => setAdaptive(e.target.checked)}
+                                    style={{ accentColor: theme.accent }} />
+                                <span className="uppercase tracking-[0.12em]">Adaptive width</span>
+                            </label>
+                        )}
                     </div>
                 )}
                 <button
                     type="button"
                     onClick={run}
                     disabled={disabled}
-                    className={`flex w-full items-center justify-center gap-2 rounded px-3 py-1.5 text-xs font-medium transition-colors ${
-                        disabled
-                            ? 'cursor-not-allowed bg-gray-400 text-white opacity-60'
-                            : 'bg-blue-500 text-white hover:bg-blue-600'}`}
+                    className="flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-[11px] font-semibold transition-opacity"
+                    style={disabled
+                        ? { background: theme.surfaceInset, color: theme.text3,
+                            border: `1px solid ${theme.line}`, cursor: 'not-allowed' }
+                        : { backgroundImage: theme.gradient, color: '#06111f' }}
                 >
                     {phase === 'running'
                         ? <><Loader2 className="h-3 w-3 animate-spin" aria-hidden />Working…</>
                         : <><RefreshCw className="h-3 w-3" aria-hidden />
-                            {mode === 'analyze' ? `Analyze ${structures.length || ''} molecule${structures.length === 1 ? '' : 's'}`
+                            {mode === 'analyze'
+                                ? `Analyze ${structures.length || ''} molecule${structures.length === 1 ? '' : 's'}`
                                 : mode === 'screen' ? `Propose ${batchSize} to screen`
                                     : 'Predict unmeasured'}</>}
                 </button>
                 {structures.length === 0 && (
-                    <p className={`text-xs ${muted}`}>
+                    <p className="text-[10px] leading-snug" style={{ color: theme.text3 }}>
                         Select points whose metadata carries a SMILES string
                         ({SMILES_KEYS.slice(0, 3).join(', ')}…).
                     </p>
@@ -351,140 +427,218 @@ const NexusPanel: React.FC = () => {
             </div>
 
             {/* Results */}
-            <div className="flex-1 overflow-auto px-3 py-2 text-xs">
+            <div className="flex-1 overflow-auto px-3 py-2.5">
                 {phase === 'error' && error && (
-                    <div className="flex items-start gap-2 rounded bg-red-500/10 p-2 text-red-500">
+                    <div className="flex items-start gap-2 rounded-lg p-2 text-[10px]"
+                        style={{ background: `${theme.crit}1a`, color: theme.crit,
+                            border: `1px solid ${theme.crit}40` }}>
                         <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
                         <div>
                             <div>{error}</div>
-                            <div className={muted}>Service URL: {nexusBaseUrl()}</div>
+                            <div style={{ color: theme.text3 }}>Service URL: {nexusBaseUrl()}</div>
                         </div>
                     </div>
                 )}
 
-                {mode === 'analyze' && analysis && (
-                    <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                            <Palette className="h-3 w-3 text-blue-500" aria-hidden />
-                            <label className={muted} htmlFor="nexus-colour">Colour map by</label>
-                            <select
-                                id="nexus-colour"
-                                value={colourBy}
-                                onChange={e => onColourChange(e.target.value)}
-                                className={`rounded border px-1 py-0.5 ${border} ${subtle}`}
-                            >
-                                {NEXUS_COLOUR_PROPERTIES.map(p => (
-                                    <option key={p.key} value={p.key}>{p.label}</option>
-                                ))}
-                            </select>
-                            <button type="button" onClick={clearColours}
-                                className={`ml-auto underline ${muted}`}>
-                                clear colours
-                            </button>
-                        </div>
-                        <div className="flex items-center gap-1" aria-hidden>
-                            {RAMP.map(c => (
-                                <span key={c} className="h-2 flex-1 rounded-sm"
-                                    style={{ backgroundColor: c }} />
-                            ))}
+                {mode === 'analyze' && analysis && chem && (
+                    <div className="space-y-3.5">
+                        <div className="grid grid-cols-2 gap-1.5">
+                            <StatTile label="Molecules" value={String(analysis.n_analyzed)}
+                                hint={analysis.n_failed > 0
+                                    ? `${analysis.n_failed} unparseable`
+                                    : `parsed in ${analysis.elapsed_seconds}s`}
+                                theme={theme} />
+                            <StatTile label="Scaffold families"
+                                value={scaffolds ? String(scaffolds.n_scaffolds) : '--'}
+                                hint={scaffolds && analysis.n_analyzed
+                                    ? `${(scaffolds.n_scaffolds / analysis.n_analyzed).toFixed(2)} per molecule`
+                                    : undefined}
+                                theme={theme} />
+                            <StatTile label="Mean drug-likeness"
+                                value={fmt(analysis.summary.drug_likeness?.mean)}
+                                hint={`± ${fmt(analysis.summary.drug_likeness?.std)} sd`}
+                                theme={theme} />
+                            <StatTile label="Ro5 pass"
+                                value={`${(chem.ro5Rate * 100).toFixed(0)}%`}
+                                tone={chem.ro5Rate >= 0.8 ? 'good' : chem.ro5Rate >= 0.5 ? 'warn' : 'crit'}
+                                hint="at most one violation"
+                                theme={theme} />
                         </div>
 
-                        <div className={`grid grid-cols-2 gap-2 rounded p-2 ${subtle}`}>
-                            {['mw', 'logp', 'tpsa', 'drug_likeness'].map(key => (
-                                <div key={key}>
-                                    <div className={muted}>{key}</div>
-                                    <div className="font-mono">
-                                        {fmt(analysis.summary[key]?.mean)}
-                                        <span className={`ml-1 ${muted}`}>
-                                            ± {fmt(analysis.summary[key]?.std)}
-                                        </span>
-                                    </div>
-                                </div>
-                            ))}
+                        <RuleDots theme={theme} items={[
+                            { label: 'Veber', pass: chem.veberRate >= 0.8 },
+                            { label: 'Alert-free', pass: chem.alertRate >= 0.8 },
+                            { label: 'Valence', pass: analysis.n_failed === 0 },
+                        ]} />
+
+                        <div className="rounded-lg p-2"
+                            style={{ background: theme.surface, border: `1px solid ${theme.line}` }}>
+                            <div className="mb-2 flex items-center gap-2">
+                                <Sparkles className="h-3 w-3" style={{ color: theme.accent }} aria-hidden />
+                                <label className="text-[10px] uppercase tracking-[0.12em]"
+                                    style={{ color: theme.text3 }} htmlFor="nexus-colour">
+                                    Colour map by
+                                </label>
+                                <select
+                                    id="nexus-colour"
+                                    value={colourBy}
+                                    onChange={e => onColourChange(e.target.value)}
+                                    className="rounded-md border px-1.5 py-0.5 text-[10px]"
+                                    style={selectStyle}
+                                >
+                                    {NEXUS_COLOUR_PROPERTIES.map(p => (
+                                        <option key={p.key} value={p.key}>{p.label}</option>
+                                    ))}
+                                </select>
+                                <button type="button" onClick={clearColours}
+                                    className="ml-auto text-[10px] underline"
+                                    style={{ color: theme.text3 }}>
+                                    clear
+                                </button>
+                            </div>
+                            <RampLegend label={colourBy} min={chem.colourMin} max={chem.colourMax}
+                                theme={theme} />
                         </div>
 
-                        <div className={muted}>
-                            {analysis.n_analyzed} analyzed in {analysis.elapsed_seconds}s
-                            {analysis.n_failed > 0 && `, ${analysis.n_failed} unparseable`}
-                            {scaffolds && ` · ${scaffolds.n_scaffolds} scaffolds`}
-                        </div>
+                        <ScatterPlot title="Property space" data={chem.scatter}
+                            xLabel="MW" yLabel="logP" colourLabel={colourBy} theme={theme} />
 
-                        <table className="w-full table-fixed">
-                            <thead className={muted}>
-                                <tr className="text-left">
-                                    <th className="w-[44%] font-normal">molecule</th>
-                                    <th className="font-normal">MW</th>
-                                    <th className="font-normal">logP</th>
-                                    <th className="font-normal">TPSA</th>
-                                    <th className="font-normal">Ro5</th>
-                                </tr>
-                            </thead>
-                            <tbody className="font-mono">
-                                {analysis.molecules.slice(0, 200).map(m => (
-                                    <tr key={m.smiles} className={`border-t ${border}`}>
-                                        <td className="truncate pr-1" title={m.smiles}>{m.formula}</td>
-                                        <td>{fmt(m.descriptors.mw, 1)}</td>
-                                        <td>{fmt(m.descriptors.logp)}</td>
-                                        <td>{fmt(m.descriptors.tpsa, 1)}</td>
-                                        <td className={m.lipinski_violations > 1 ? 'text-amber-500' : ''}>
-                                            {m.lipinski_violations}
-                                        </td>
+                        <Histogram title="logP" values={chem.logp} digits={2} theme={theme} />
+                        <Histogram title="Polar surface area" values={chem.tpsa}
+                            unit=" Å²" digits={0} theme={theme} />
+
+                        {scaffoldBars.length > 0 && (
+                            <RankedBars title="Largest scaffold families" items={scaffoldBars}
+                                note={scaffolds ? `${scaffolds.n_scaffolds} in total` : undefined}
+                                valueFormat={v => String(v)} theme={theme} />
+                        )}
+
+                        <div>
+                            <div className="mb-1 text-[10px] font-medium uppercase tracking-[0.14em]"
+                                style={{ color: theme.text2 }}>Molecules</div>
+                            <table className="w-full table-fixed text-[10px]">
+                                <thead>
+                                    <tr className="text-left" style={{ color: theme.text3 }}>
+                                        <th className="w-[40%] font-normal">formula</th>
+                                        <th className="font-normal">MW</th>
+                                        <th className="font-normal">logP</th>
+                                        <th className="font-normal">TPSA</th>
+                                        <th className="font-normal">Ro5</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="font-mono tabular-nums">
+                                    {analysis.molecules.slice(0, 200).map(m => (
+                                        <tr key={m.smiles} style={{ borderTop: `1px solid ${theme.line}` }}>
+                                            <td className="truncate pr-1" title={m.smiles}>{m.formula}</td>
+                                            <td>{fmt(m.descriptors.mw, 1)}</td>
+                                            <td>{fmt(m.descriptors.logp)}</td>
+                                            <td>{fmt(m.descriptors.tpsa, 1)}</td>
+                                            <td style={{ color: m.lipinski_violations > 1 ? theme.warn : theme.text2 }}>
+                                                {m.lipinski_violations}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 )}
 
                 {mode === 'screen' && batch && (
-                    <div className="space-y-2">
-                        <div className={muted}>
-                            {batch.rationale} · {batch.n_measured} already measured
+                    <div className="space-y-3.5">
+                        <div className="grid grid-cols-2 gap-1.5">
+                            <StatTile label="Proposed" value={String(batch.batch.length)}
+                                hint={`by ${strategy}`} theme={theme} />
+                            <StatTile label="Already measured" value={String(batch.n_measured)}
+                                hint={batch.n_measured === 0
+                                    ? 'cold start: diversity only' : 'informs the model'}
+                                theme={theme} />
                         </div>
-                        <ol className="space-y-1">
-                            {batch.batch.map((item, rank) => (
-                                <li key={item.smiles}
-                                    className={`flex items-center gap-2 border-t pt-1 ${border}`}>
-                                    <span className={`w-5 shrink-0 text-right ${muted}`}>{rank + 1}</span>
-                                    <span className="truncate font-mono" title={item.smiles}>
-                                        {item.smiles}
-                                    </span>
-                                    <span className={`ml-auto shrink-0 font-mono ${muted}`}>
-                                        {item.score.toFixed(3)}
-                                    </span>
-                                </li>
-                            ))}
-                        </ol>
+                        <p className="text-[10px] leading-snug" style={{ color: theme.text3 }}>
+                            {batch.rationale}
+                        </p>
+                        <RankedBars
+                            title="Acquisition score"
+                            note="higher is more informative"
+                            items={batch.batch.slice(0, 14).map((item, rank) => ({
+                                label: `${rank + 1}. ${item.smiles}`,
+                                value: item.score,
+                                sublabel: item.smiles,
+                            }))}
+                            valueFormat={v => v.toFixed(3)}
+                            theme={theme}
+                        />
+                        <div>
+                            <div className="mb-1 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.14em]"
+                                style={{ color: theme.text2 }}>
+                                <Layers className="h-3 w-3" aria-hidden />Full batch
+                            </div>
+                            <ol className="space-y-0.5">
+                                {batch.batch.map((item, rank) => (
+                                    <li key={item.smiles}
+                                        className="flex items-center gap-2 py-0.5 text-[10px]"
+                                        style={{ borderTop: `1px solid ${theme.line}` }}>
+                                        <span className="w-5 shrink-0 text-right tabular-nums"
+                                            style={{ color: theme.text3 }}>{rank + 1}</span>
+                                        <span className="truncate font-mono" title={item.smiles}
+                                            style={{ color: theme.text2 }}>
+                                            {item.smiles}
+                                        </span>
+                                        <span className="ml-auto shrink-0 font-mono tabular-nums"
+                                            style={{ color: theme.text3 }}>
+                                            {item.score.toFixed(3)}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ol>
+                        </div>
                     </div>
                 )}
 
                 {mode === 'predict' && prediction && (
-                    <div className="space-y-2">
-                        <div className={`rounded p-2 ${subtle}`}>
-                            <div>
-                                {prediction.task} · trained on {prediction.n_labelled} labelled
-                                molecules, {prediction.n_calibration} held out to calibrate
-                            </div>
-                            <div className={muted}>
-                                Intervals carry a {(prediction.nominal_coverage * 100).toFixed(0)}%
-                                coverage guarantee; measured {(prediction.calibration_coverage * 100).toFixed(1)}%
-                                on the calibration set.
-                            </div>
+                    <div className="space-y-3.5">
+                        <div className="grid grid-cols-2 gap-1.5">
+                            <StatTile label="Trained on" value={String(prediction.n_labelled)}
+                                unit="labelled" hint={`${prediction.task} task`} theme={theme} />
+                            <StatTile label="Calibrated on" value={String(prediction.n_calibration)}
+                                unit="held out" hint="never seen in training" theme={theme} />
                         </div>
-                        <table className="w-full table-fixed">
-                            <thead className={muted}>
-                                <tr className="text-left">
-                                    <th className="w-[52%] font-normal">molecule</th>
+                        <CoverageBar nominal={prediction.nominal_coverage}
+                            measured={prediction.calibration_coverage} theme={theme} />
+                        <p className="text-[10px] leading-snug" style={{ color: theme.text3 }}>
+                            Split-conformal intervals: the guarantee is finite-sample and
+                            distribution-free, so coverage holds whatever the model gets wrong.
+                            {prediction.interval_mode === 'adaptive'
+                                ? ' Widths are scaled by the model\u2019s own uncertainty, so they vary per molecule.'
+                                : ' Every interval has the same width; tick "adaptive width" to let it vary.'}
+                            {prediction.mean_interval_width !== null
+                                && ` Mean width ${prediction.mean_interval_width.toFixed(2)}.`}
+                        </p>
+                        <IntervalStrip
+                            title="Predictions, sorted"
+                            note={`${prediction.predictions.length} molecules`}
+                            data={prediction.predictions.map(p => ({
+                                label: p.smiles,
+                                prediction: p.prediction,
+                                low: p.interval_low,
+                                high: p.interval_high,
+                            }))}
+                            theme={theme}
+                        />
+                        <table className="w-full table-fixed text-[10px]">
+                            <thead>
+                                <tr className="text-left" style={{ color: theme.text3 }}>
+                                    <th className="w-[50%] font-normal">molecule</th>
                                     <th className="font-normal">predicted</th>
                                     <th className="font-normal">interval</th>
                                 </tr>
                             </thead>
-                            <tbody className="font-mono">
+                            <tbody className="font-mono tabular-nums">
                                 {prediction.predictions.slice(0, 200).map(p => (
-                                    <tr key={p.smiles} className={`border-t ${border}`}>
+                                    <tr key={p.smiles} style={{ borderTop: `1px solid ${theme.line}` }}>
                                         <td className="truncate pr-1" title={p.smiles}>{p.smiles}</td>
                                         <td>{fmt(p.prediction)}</td>
-                                        <td className={muted}>
+                                        <td style={{ color: theme.text3 }}>
                                             {p.interval_low === undefined
                                                 ? (p.ambiguous ? 'ambiguous' : 'confident')
                                                 : `[${fmt(p.interval_low)}, ${fmt(p.interval_high)}]`}
@@ -497,12 +651,34 @@ const NexusPanel: React.FC = () => {
                 )}
 
                 {phase === 'idle' && !analysis && !batch && !prediction && (
-                    <p className={muted}>
-                        NEXUS analyzes the molecules behind your selected points: descriptors and
-                        drug-likeness, scaffold families, which compounds to screen next, and
-                        property predictions with calibrated uncertainty.
-                        {!mapId && ' Open a map to begin.'}
-                    </p>
+                    <div className="space-y-2.5 pt-1">
+                        <p className="text-[11px] leading-relaxed" style={{ color: theme.text2 }}>
+                            NEXUS reads the molecules behind your selected points: descriptors and
+                            drug-likeness, scaffold families, which compounds to screen next, and
+                            property predictions with calibrated uncertainty.
+                        </p>
+                        <div className="space-y-1.5">
+                            {[['Analyze', 'descriptors, scaffolds, and a map coloured by any of them'],
+                              ['Next batch', 'the most informative compounds to measure next'],
+                              ['Predict', 'values with intervals that carry a coverage guarantee'],
+                            ].map(([name, what]) => (
+                                <div key={name} className="rounded-lg px-2.5 py-2"
+                                    style={{ background: theme.surface, border: `1px solid ${theme.line}` }}>
+                                    <div className="text-[10px] font-semibold" style={{ color: theme.text }}>
+                                        {name}
+                                    </div>
+                                    <div className="text-[10px] leading-snug" style={{ color: theme.text3 }}>
+                                        {what}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        {!mapId && (
+                            <p className="text-[10px]" style={{ color: theme.text3 }}>
+                                Open a map to begin.
+                            </p>
+                        )}
+                    </div>
                 )}
             </div>
         </div>

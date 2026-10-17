@@ -63,7 +63,14 @@ export const usePointColorStore = {
     }),
 };
 
-/** A stand-in for the map: one swatch per point the panel coloured. */
+/**
+ * A stand-in for the map.
+ *
+ * Point *positions* here are a deterministic layout derived from each id --
+ * illustrative only, since the harness has no embedding. The point *colours*
+ * are the real ones the panel wrote through the colour store, which is what
+ * these screenshots are meant to show.
+ */
 export const MapPreview: React.FC = () => {
     const [, force] = React.useReducer((n: number) => n + 1, 0);
     React.useEffect(() => {
@@ -71,21 +78,60 @@ export const MapPreview: React.FC = () => {
         return () => { listeners.delete(force); };
     }, []);
     const entries = [...colourState.colors.entries()];
+    const coloured = new Map(entries);
+
+    // Golden-angle spiral: stable, evenly spread, and obviously a layout rather
+    // than a claim about chemical similarity.
+    const layout = SELECTED.map((p, i) => {
+        const angle = i * 2.399963;
+        const radius = Math.sqrt((i + 0.5) / SELECTED.length);
+        return {
+            id: p.id,
+            title: p.title ?? p.id,
+            x: 50 + Math.cos(angle) * radius * 42,
+            y: 50 + Math.sin(angle) * radius * 42,
+        };
+    });
+
     return (
-        <div className="flex h-full flex-col gap-2 p-3">
-            <div className="text-xs text-gray-500">
-                Map stand-in — {entries.length
-                    ? `${entries.length} points coloured by the panel`
-                    : 'no colours written yet'}
+        <div className="flex h-full flex-col gap-2 p-3"
+            style={{ background: '#07090d', color: '#93a4ba' }}>
+            <div className="flex items-baseline gap-2">
+                <span className="text-[10px] font-medium uppercase tracking-[0.14em]">
+                    Map stand-in
+                </span>
+                <span className="text-[10px]" style={{ color: '#5d6e84' }}>
+                    {entries.length
+                        ? `${entries.length} points coloured by the panel`
+                        : 'no colours written yet'}
+                </span>
             </div>
-            <div className="grid flex-1 content-start gap-1"
-                style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(18px, 1fr))' }}>
-                {(entries.length ? entries : SELECTED.map(p => [p.id, '#e1e0d9'] as const))
-                    .map(([id, colour]) => (
-                        <div key={id} title={id}
-                            className="aspect-square rounded-sm"
-                            style={{ backgroundColor: colour }} />
+            <div className="relative flex-1 overflow-hidden rounded-lg"
+                style={{ background: '#0a0d12', border: '1px solid rgba(255,255,255,0.07)' }}>
+                <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet"
+                    className="h-full w-full" role="img" aria-label="map stand-in point cloud">
+                    <defs>
+                        <radialGradient id="glow">
+                            <stop offset="0%" stopColor="#4f9dff" stopOpacity="0.16" />
+                            <stop offset="100%" stopColor="#4f9dff" stopOpacity="0" />
+                        </radialGradient>
+                    </defs>
+                    <circle cx={50} cy={50} r={46} fill="url(#glow)" />
+                    {[20, 32, 44].map(r => (
+                        <circle key={r} cx={50} cy={50} r={r} fill="none"
+                            stroke="rgba(255,255,255,0.045)" strokeWidth={0.2} />
                     ))}
+                    {layout.map(point => (
+                        <circle key={point.id} cx={point.x} cy={point.y} r={1.25}
+                            fill={coloured.get(point.id) ?? '#263241'}
+                            stroke="#0a0d12" strokeWidth={0.35}>
+                            <title>{point.title}</title>
+                        </circle>
+                    ))}
+                </svg>
+            </div>
+            <div className="text-[9px]" style={{ color: '#5d6e84' }}>
+                Positions are an illustrative layout; colours come from the panel.
             </div>
         </div>
     );

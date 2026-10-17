@@ -102,9 +102,11 @@ export function searchSimilar(query: string, library: string[], topK = 50,
 
 export function predictWithIntervals(
     smiles: string[], labels: (number | null)[], alpha = 0.1,
-    signal?: AbortSignal,
+    options: { adaptive?: boolean } = {}, signal?: AbortSignal,
 ): Promise<NexusPredictResponse> {
-    return request<NexusPredictResponse>('/predict', { smiles, labels, alpha }, signal);
+    return request<NexusPredictResponse>('/predict', {
+        smiles, labels, alpha, adaptive: options.adaptive ?? false,
+    }, signal);
 }
 
 export function proposeScreeningBatch(

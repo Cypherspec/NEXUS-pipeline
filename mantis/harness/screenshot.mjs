@@ -51,25 +51,35 @@ async function shot(name) {
 }
 
 // The header reports the live service version when the backend is reachable.
-const header = await page.locator('text=/service v|service offline/').first().textContent();
+const header = await page.locator('text=/^v\\d|offline/').first().textContent();
 console.log(`  service status in panel: ${header}`);
 await shot('01_panel_initial');
 
 // --- Analyze: descriptors for every selected molecule, then colour the map.
 await page.getByRole('button', { name: /Analyze \d+ molecules/ }).click();
-await page.waitForSelector('text=/analyzed in/', { timeout: 60000 });
-await page.waitForTimeout(400);
+await page.waitForSelector('text=/Scaffold families/', { timeout: 60000 });
+await page.waitForTimeout(500);
 await shot('02_analyze_results');
 
 await page.locator('#nexus-colour').selectOption('logp');
-await page.waitForTimeout(500);
+await page.waitForTimeout(600);
 await shot('03_map_coloured_by_logp');
+
+// The charts below the fold: property space, distributions, scaffold families.
+const results = page.locator('div.flex-1.overflow-auto');
+await results.evaluate(el => { el.scrollTop = 320; });
+await page.waitForTimeout(300);
+await shot('03b_property_space');
+await results.evaluate(el => { el.scrollTop = 700; });
+await page.waitForTimeout(300);
+await shot('03c_distributions');
+await results.evaluate(el => { el.scrollTop = 0; });
 
 // --- Next batch: active learning picks what to screen next.
 await page.getByRole('button', { name: 'Next batch' }).click();
 await page.locator('#nexus-label').selectOption('measured_logS');
 await page.getByRole('button', { name: /Propose \d+ to screen/ }).click();
-await page.waitForSelector('text=/acquisition over/', { timeout: 60000 });
+await page.waitForSelector('text=/Acquisition score/', { timeout: 60000 });
 await page.waitForTimeout(400);
 await shot('04_next_batch');
 
@@ -77,15 +87,21 @@ await shot('04_next_batch');
 await page.getByRole('button', { name: 'Predict' }).click();
 await page.locator('#nexus-label').selectOption('measured_logS');
 await page.getByRole('button', { name: 'Predict unmeasured' }).click();
-await page.waitForSelector('text=/coverage guarantee/', { timeout: 60000 });
+await page.waitForSelector('text=/measured vs/', { timeout: 60000 });
 await page.waitForTimeout(400);
 await shot('05_predict_with_intervals');
 
-// --- Dark mode, which Mantis panels must support.
-await page.evaluate(() => { document.documentElement.dataset.theme = 'dark'; });
+// The interval strip, which is the point of the conformal layer.
+const predictResults = page.locator('div.flex-1.overflow-auto');
+await predictResults.evaluate(el => { el.scrollTop = 260; });
+await page.waitForTimeout(300);
+await shot('05b_interval_strip');
+
+// --- Light mode, which Mantis panels must support alongside dark.
+await page.evaluate(() => { document.documentElement.dataset.theme = 'light'; });
 await page.getByRole('button', { name: 'Analyze' }).click();
-await page.waitForTimeout(600);
-await shot('06_dark_mode');
+await page.waitForTimeout(700);
+await shot('06_light_mode');
 
 console.log(problems.length
     ? `  console errors: ${problems.length}\n   ${problems.slice(0, 5).join('\n   ')}`

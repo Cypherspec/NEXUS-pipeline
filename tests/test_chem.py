@@ -140,3 +140,37 @@ def test_aromatic_bond_orders_set():
     assert all(b.order == AROMATIC for b in ring_bonds)
     exo = [b for b in mol.bonds if not b.in_ring][0]
     assert exo.order == SINGLE
+
+
+def test_scaffold_split_never_starves_the_validation_set():
+    """A scaffold group larger than the validation target must not empty it.
+
+    FreeSolv is the case that breaks naive greedy assignment: its acyclic
+    group is half the dataset, so it overflows train, overflows valid, lands
+    in test, and every later group still fits in train -- leaving validation
+    with nothing and test with 50% of the data.
+    """
+    from nexus.chem.scaffold import scaffold_split
+
+    # One group of 70 -- too big for train (60) or valid (20), so greedy
+    # assignment drops it in test -- then 30 molecules with distinct scaffolds,
+    # every one of which still fits in train. Without rebalancing, valid ends
+    # up empty.
+    mols = [parse_smiles("c1ccccc1" + "C" * (i % 4)) for i in range(70)]
+    mols += [parse_smiles("c1ccccc1" + "C" * (i + 1) + "c1ccccc1") for i in range(30)]
+
+    train, valid, test = scaffold_split(mols, frac_train=0.6, frac_valid=0.2, seed=0)
+
+    assert len(valid) > 0, "validation set was starved"
+    assert len(train) + len(valid) + len(test) == len(mols)
+    # Every molecule lands in exactly one subset.
+    assert len(set(train) & set(valid)) == 0
+    assert len(set(valid) & set(test)) == 0
+    assert len(set(train) & set(test)) == 0
+    # No scaffold spans two subsets.
+    from nexus.chem.scaffold import murcko_scaffold
+    where = {}
+    for name, subset in (("train", train), ("valid", valid), ("test", test)):
+        for i in subset:
+            where.setdefault(murcko_scaffold(mols[int(i)]), set()).add(name)
+    assert all(len(v) == 1 for v in where.values()), "a scaffold spans subsets"
