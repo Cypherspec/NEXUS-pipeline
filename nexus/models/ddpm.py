@@ -180,9 +180,13 @@ class MoleculeDDPM:
         bond_loss = cross_entropy(flat_logits[pair_index], bonds[iu])
         return atom_loss + bond_loss
 
-    def sample(self, n_atoms: int | None = None, seed: int = 0
-               ) -> tuple[np.ndarray, np.ndarray]:
-        """Generate one molecular graph by reverse diffusion."""
+    def sample(self, n_atoms: int | None = None, seed: int = 0,
+               constrain_valence: bool = True) -> tuple[np.ndarray, np.ndarray]:
+        """Generate one molecular graph by reverse diffusion.
+
+        With `constrain_valence`, bond choices that would exceed an atom's
+        valence are masked out at every reverse step.
+        """
         rng = np.random.default_rng(seed)
         if n_atoms is None:
             n_atoms = int(rng.choice(len(self.size_distribution),
@@ -190,10 +194,12 @@ class MoleculeDDPM:
         n_atoms = max(2, min(n_atoms, self.max_atoms))
 
         atoms = rng.choice(len(ATOM_VOCAB), size=n_atoms, p=self.atom_marginal)
-        bonds = rng.choice(len(BOND_VOCAB), size=(n_atoms, n_atoms),
-                           p=self.bond_marginal)
-        bonds = np.triu(bonds, 1)
-        bonds = bonds + bonds.T
+        bonds = np.zeros((n_atoms, n_atoms), dtype=int)
+        if not constrain_valence:
+            bonds = rng.choice(len(BOND_VOCAB), size=(n_atoms, n_atoms),
+                               p=self.bond_marginal)
+            bonds = np.triu(bonds, 1)
+            bonds = bonds + bonds.T
 
         for t in range(self.n_steps, 0, -1):
             atom_logits, bond_logits = self.model(atoms, bonds, t / self.n_steps)
@@ -202,10 +208,67 @@ class MoleculeDDPM:
             atom_post = self.atom_diffusion.posterior(atoms, atom_probs, t)
             bond_post = self.bond_diffusion.posterior(bonds, bond_probs, t)
             atoms = _categorical(atom_post, rng)
-            bonds = _categorical(bond_post, rng)
-            bonds = np.triu(bonds, 1)
-            bonds = bonds + bonds.T
+            if constrain_valence:
+                # Resolve pairs one at a time in a random order, re-checking
+                # headroom after each, so the running structure stays valid.
+                new_bonds = np.zeros_like(bonds)
+                pairs = [(i, j) for i in range(n_atoms) for j in range(i + 1, n_atoms)]
+                rng.shuffle(pairs)
+                for i, j in pairs:
+                    allowed = valence_mask(atoms, new_bonds)[i, j]
+                    probs = bond_post[i, j] * allowed
+                    total = probs.sum()
+                    probs = probs / total if total > 1e-12 else allowed / allowed.sum()
+                    choice = int(_categorical(probs[None, :], rng)[0])
+                    new_bonds[i, j] = new_bonds[j, i] = choice
+                bonds = new_bonds
+            else:
+                bonds = _categorical(bond_post, rng)
+                bonds = np.triu(bonds, 1)
+                bonds = bonds + bonds.T
         return atoms, bonds
+
+
+# Maximum bond-order sum per generated element, used to constrain sampling.
+MAX_VALENCE_BY_ATOM = {"C": 4, "N": 3, "O": 2, "F": 1, "S": 6, "Cl": 1, "Br": 1}
+BOND_ORDER_VALUE = {0: 0.0, 1: 1.0, 2: 2.0, 3: 3.0, 4: 1.5}
+
+
+def valence_mask(atoms: np.ndarray, bonds: np.ndarray) -> np.ndarray:
+    """Which bond types each pair may still take without exceeding valence.
+
+    Returns a boolean (n, n, n_bond_types) mask. Sampling inside this mask is
+    what makes generated graphs chemically well-formed; without it almost every
+    sample is over-valent, because the bond marginal puts far too much mass on
+    "bonded" for a sparse molecular graph.
+    """
+    n = len(atoms)
+    used = np.zeros(n)
+    for i in range(n):
+        for j in range(n):
+            if i != j:
+                used[i] += BOND_ORDER_VALUE[int(bonds[i, j])]
+    capacity = np.array([MAX_VALENCE_BY_ATOM.get(ATOM_VOCAB[a], 0) for a in atoms],
+                        dtype=float)
+    mask = np.ones((n, n, len(BOND_VOCAB)), dtype=bool)
+    for i in range(n):
+        for j in range(n):
+            if i == j:
+                mask[i, j, 1:] = False          # no self bonds
+                continue
+            current = BOND_ORDER_VALUE[int(bonds[i, j])]
+            headroom_i = capacity[i] - (used[i] - current)
+            headroom_j = capacity[j] - (used[j] - current)
+            headroom = min(headroom_i, headroom_j)
+            for b in range(1, len(BOND_VOCAB)):
+                if BOND_ORDER_VALUE[b] > headroom + 1e-9:
+                    mask[i, j, b] = False
+    # Padding atoms can carry no bonds at all.
+    for i in range(n):
+        if atoms[i] == 0:
+            mask[i, :, 1:] = False
+            mask[:, i, 1:] = False
+    return mask
 
 
 def _softmax(logits: np.ndarray) -> np.ndarray:

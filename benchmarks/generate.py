@@ -32,19 +32,36 @@ ROOT = Path(__file__).resolve().parent.parent
 MAX_ATOMS = 18
 
 
-def load_training_graphs(max_atoms: int = MAX_ATOMS, limit: int = 1500):
+def load_training_graphs(max_atoms: int = MAX_ATOMS, limit: int = 20000):
+    """Small, sane, single-fragment molecules pooled across MoleculeNet."""
     from nexus.data import load_dataset
 
-    mols, _, _, _ = load_dataset("esol")
+    mols = []
+    for name in ("esol", "bbbp", "clintox", "tox21", "lipo", "freesolv"):
+        try:
+            dataset, _, _, _ = load_dataset(name)
+        except Exception:
+            continue
+        mols.extend(dataset)
     graphs, reference = [], []
+    seen: set[str] = set()
     for mol in mols:
+        if len(mol.components()) != 1:
+            continue
         if not (3 <= mol.n_atoms <= max_atoms) or not mol.is_sane():
             continue
         g = molecule_to_graph(mol)
         if g is None:
             continue
+        try:
+            smi = write_smiles(mol)
+        except Exception:
+            continue
+        if smi in seen:
+            continue
+        seen.add(smi)
         graphs.append(g)
-        reference.append(write_smiles(mol))
+        reference.append(smi)
         if len(graphs) >= limit:
             break
     return graphs, reference
@@ -127,10 +144,16 @@ def main() -> None:
 
     print("sampling...")
     t1 = time.time()
-    samples = [model.sample(seed=1000 + i) for i in range(args.samples)]
+    samples = [model.sample(seed=1000 + i, constrain_valence=True)
+               for i in range(args.samples)]
     sample_seconds = time.time() - t1
-
     trained = evaluate(samples, training_set)
+
+    # Ablation: the same trained model sampled without the valence constraint,
+    # which isolates how much of the validity comes from the constraint.
+    unconstrained = evaluate(
+        [model.sample(seed=2000 + i, constrain_valence=False)
+         for i in range(min(args.samples, 100))], training_set)
 
     # Control: samples drawn straight from the marginals, with no model. Any
     # validity above this is what the learned denoiser actually contributes.
@@ -159,6 +182,9 @@ def main() -> None:
         "sample_seconds": round(sample_seconds, 1),
         "model": {k: v for k, v in trained.items()
                   if k not in ("valid_molecules", "smiles")},
+        "model_unconstrained_sampling": {
+            k: v for k, v in unconstrained.items()
+            if k not in ("valid_molecules", "smiles")},
         "marginal_baseline": {k: v for k, v in baseline.items()
                               if k not in ("valid_molecules", "smiles")},
         "properties_generated": property_summary(trained["valid_molecules"]),

@@ -1,0 +1,52 @@
+{
+  "dataset": "esol",
+  "seed": 0,
+  "task_type": "regression",
+  "metric": "rmse",
+  "n_total": 1128,
+  "n_train": 902,
+  "n_valid": 112,
+  "n_test": 114,
+  "n_tasks": 1,
+  "scaffold_leakage_test": 0.0,
+  "methods": {
+    "ECFP + RF": {
+      "test_score": 1.4259398604763207,
+      "seconds": 35.1
+    },
+    "ECFP + linear": {
+      "test_score": 1.6025210730750774,
+      "seconds": 0.1
+    },
+    "descriptors + RF": {
+      "test_score": 1.0669619414113116,
+      "seconds": 3.5
+    },
+    "descriptors + linear": {
+      "test_score": 1.1554305747513178,
+      "seconds": 0.0
+    },
+    "ECFP+descriptors + RF": {
+      "test_score": 0.9960362027726258,
+      "seconds": 25.8
+    },
+    "ECFP+descriptors + linear": {
+      "test_score": 1.3926310835013527,
+      "seconds": 0.2
+    },
+    "D-MPNN": {
+      "test_score": 1.0740898096606801,
+      "valid_score": 0.7367241568472405,
+      "best_epoch": 41,
+      "seconds": 88.1,
+      "n_parameters": 62721
+    },
+    "D-MPNN + descriptors": {
+      "test_score": 0.9039848842657292,
+      "valid_score": 0.6326810375878482,
+      "best_epoch": 19,
+      "seconds": 54.6,
+      "n_parameters": 65793
+    }
+  }
+}
