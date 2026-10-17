@@ -1,0 +1,52 @@
+{
+  "dataset": "clintox",
+  "seed": 1,
+  "task_type": "classification",
+  "metric": "roc_auc",
+  "n_total": 1484,
+  "n_train": 1187,
+  "n_valid": 148,
+  "n_test": 149,
+  "n_tasks": 2,
+  "scaffold_leakage_test": 0.0,
+  "methods": {
+    "ECFP + RF": {
+      "test_score": 0.6743323166195506,
+      "seconds": 4.6
+    },
+    "ECFP + linear": {
+      "test_score": 0.8372638000297574,
+      "seconds": 0.1
+    },
+    "descriptors + RF": {
+      "test_score": 0.7774884689778307,
+      "seconds": 1.3
+    },
+    "descriptors + linear": {
+      "test_score": 0.8381813222238754,
+      "seconds": 0.0
+    },
+    "ECFP+descriptors + RF": {
+      "test_score": 0.7348825819570501,
+      "seconds": 3.4
+    },
+    "ECFP+descriptors + linear": {
+      "test_score": 0.8491574914447255,
+      "seconds": 0.3
+    },
+    "D-MPNN": {
+      "test_score": 0.9180491494321281,
+      "valid_score": 0.9406259214212,
+      "best_epoch": 29,
+      "seconds": 99.6,
+      "n_parameters": 62850
+    },
+    "D-MPNN + descriptors": {
+      "test_score": 0.9306154838069731,
+      "valid_score": 0.9448303663570692,
+      "best_epoch": 35,
+      "seconds": 110.3,
+      "n_parameters": 65922
+    }
+  }
+}
