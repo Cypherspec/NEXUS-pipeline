@@ -17,3 +17,4 @@ results/raw_autogluon*/
 results/*.log
 results/raw_v2/
 paper_tabular/main.pdf
+data/go/

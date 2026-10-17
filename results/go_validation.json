@@ -1,0 +1,86 @@
+{
+  "go_version": "releases/2026-07-26",
+  "n_terms": 48340,
+  "n_annotations": 904644,
+  "n_genes": 31477,
+  "load_seconds": 7.96,
+  "positive_controls": [
+    {
+      "target": "GO:0006281",
+      "label": "DNA repair",
+      "n_drawn": 60,
+      "rank_of_target": 0,
+      "target_fdr": 1.9771177716419086e-99,
+      "top_term": "GO:0006281",
+      "top_term_name": "DNA repair",
+      "top_term_fdr": 1.9771177716419086e-99,
+      "target_or_relative_in_top10": true,
+      "n_significant_fdr05": 365
+    },
+    {
+      "target": "GO:0006915",
+      "label": "apoptotic process",
+      "n_drawn": 60,
+      "rank_of_target": 0,
+      "target_fdr": 1.2817940584820275e-73,
+      "top_term": "GO:0006915",
+      "top_term_name": "apoptotic process",
+      "top_term_fdr": 1.2817940584820275e-73,
+      "target_or_relative_in_top10": true,
+      "n_significant_fdr05": 510
+    },
+    {
+      "target": "GO:0007049",
+      "label": "cell cycle",
+      "n_drawn": 60,
+      "rank_of_target": 0,
+      "target_fdr": 1.039638179873592e-72,
+      "top_term": "GO:0007049",
+      "top_term_name": "cell cycle",
+      "top_term_fdr": 1.039638179873592e-72,
+      "target_or_relative_in_top10": true,
+      "n_significant_fdr05": 693
+    },
+    {
+      "target": "GO:0006955",
+      "label": "immune response",
+      "n_drawn": 60,
+      "rank_of_target": null,
+      "target_fdr": null,
+      "top_term": "GO:0140546",
+      "top_term_name": "defense response to symbiont",
+      "top_term_fdr": 7.459566610360073e-34,
+      "target_or_relative_in_top10": true,
+      "n_significant_fdr05": 394
+    },
+    {
+      "target": "GO:0006096",
+      "label": "glycolytic process",
+      "n_drawn": 60,
+      "rank_of_target": 0,
+      "target_fdr": 4.23436398954207e-161,
+      "top_term": "GO:0006096",
+      "top_term_name": "glycolytic process",
+      "top_term_fdr": 4.23436398954207e-161,
+      "target_or_relative_in_top10": true,
+      "n_significant_fdr05": 654
+    }
+  ],
+  "false_positive_control": {
+    "n_trials": 40,
+    "genes_per_trial": 60,
+    "alpha": 0.05,
+    "mean_significant_terms": 0.275,
+    "median_significant_terms": 0.0,
+    "max_significant_terms": 7,
+    "fraction_trials_with_any_hit": 0.075,
+    "median_min_fdr": 0.25636190810214254
+  },
+  "semantic_similarity": {
+    "n_same_pathway_pairs": 200,
+    "n_random_pairs": 200,
+    "mean_same_pathway": 0.4513138543914439,
+    "mean_random": 0.20478523162185525,
+    "auc_same_vs_random": 0.884825
+  }
+}
