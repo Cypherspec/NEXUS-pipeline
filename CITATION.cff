@@ -1,10 +1,10 @@
 cff-version: 1.2.0
 message: "If you use NEXUS, please cite it as below."
-title: "NEXUS: cross-fitted greedy ensemble selection with temperature calibration for tabular classification"
+title: "NEXUS: Non-Equilibrium eXploration with Unified Synthesis -- a dependency-free drug discovery pipeline"
 authors:
   - family-names: "Kommisetty"
     given-names: "Nischay"
-version: 1.0.0
-date-released: 2026-10-11
+version: 0.1.0
+date-released: 2026-10-17
 license: MIT
 repository-code: "https://github.com/Cypherspec/NEXUS-pipeline"

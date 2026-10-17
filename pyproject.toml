@@ -4,28 +4,24 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nexus-pipeline"
-version = "1.0.0"
-description = "Cross-fitted greedy ensemble selection with temperature calibration for tabular classification"
+version = "0.1.0"
+description = "Non-Equilibrium eXploration with Unified Synthesis: a dependency-free drug discovery pipeline"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
-dependencies = [
-    "numpy>=1.26",
-    "pandas>=2.0",
-    "scipy>=1.11",
-    "scikit-learn>=1.5",
-    "lightgbm>=4.0",
-    "xgboost>=2.0",
-    "catboost>=1.2",
-    "joblib>=1.3",
-]
+dependencies = ["numpy>=1.26"]
 
 [project.optional-dependencies]
-benchmark = ["matplotlib>=3.8"]
-dev = ["pytest>=8", "matplotlib>=3.8"]
+# Benchmarks compare against scikit-learn baselines and plot figures; the
+# nexus package itself needs only NumPy.
+bench = ["scikit-learn>=1.5", "matplotlib>=3.8", "pandas>=2.0", "scipy>=1.11"]
+dev = ["pytest>=8", "scikit-learn>=1.5", "matplotlib>=3.8", "pandas>=2.0", "scipy>=1.11"]
+# The archived tabular-ensemble study kept under tabular_ensemble/.
+tabular = ["scikit-learn>=1.5", "lightgbm>=4.0", "xgboost>=2.0", "catboost>=1.2",
+           "pandas>=2.0", "scipy>=1.11", "joblib>=1.3"]
 
 [tool.setuptools.packages.find]
-include = ["nexus*", "tabular_ensemble*"]
+include = ["nexus*"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "tabular_ensemble/tests"]
+testpaths = ["tests"]
