@@ -1,46 +1,36 @@
 {
-  "n_training_molecules": 786,
+  "n_training_molecules": 6266,
   "max_atoms": 18,
-  "training_steps": 12000,
+  "training_steps": 25000,
   "diffusion_steps": 50,
-  "final_loss": 0.9344447858231523,
-  "train_seconds": 2000.3,
-  "sample_seconds": 785.5,
+  "final_loss": 1.021059686141512,
+  "train_seconds": 520.7,
+  "sample_seconds": 652.3,
   "model": {
-    "n_sampled": 300,
-    "validity": 0.03,
-    "uniqueness": 1.0,
-    "novelty": 0.8888888888888888
+    "n_sampled": 200,
+    "validity": 0.0,
+    "uniqueness": 0.0,
+    "novelty": 0.0
+  },
+  "model_unconstrained_sampling": {
+    "n_sampled": 100,
+    "validity": 0.0,
+    "uniqueness": 0.0,
+    "novelty": 0.0
   },
   "marginal_baseline": {
-    "n_sampled": 300,
-    "validity": 0.04,
+    "n_sampled": 200,
+    "validity": 0.02,
     "uniqueness": 1.0,
     "novelty": 1.0
   },
-  "properties_generated": {
-    "mean_atoms": 8.0,
-    "mean_mw": 110.98177777777778,
-    "mean_rings": 1.3333333333333333,
-    "mean_tpsa": 0.36000000000000004,
-    "mean_drug_likeness": 0.03679839782657192
-  },
+  "properties_generated": {},
   "properties_training": {
-    "mean_atoms": 10.311704834605598,
-    "mean_mw": 159.85635877862595,
-    "mean_rings": 0.9707379134860051,
-    "mean_tpsa": 24.63067430025445,
-    "mean_drug_likeness": 0.3557813289294846
+    "mean_atoms": 12.180657516757101,
+    "mean_mw": 181.43768432812,
+    "mean_rings": 1.1465049473348228,
+    "mean_tpsa": 41.560043089690396,
+    "mean_drug_likeness": 0.5620739403337156
   },
-  "example_smiles": [
-    "C1C2Cc(-c3CC(C)c3)(C)c12",
-    "C=1(C2(CC2)C=CCC=1)C",
-    "CC(C)C",
-    "CC(CC)C",
-    "CC1(CCC1)CC",
-    "CC(CCCCC)C",
-    "C1(C23N4C1CC2C3(C)C4)CC",
-    "CC=CCCC",
-    "C1(CC2(CC2(C1C)CC)C)C"
-  ]
+  "example_smiles": []
 }

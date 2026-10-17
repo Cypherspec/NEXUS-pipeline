@@ -1,0 +1,242 @@
+[
+ {
+  "id": "pt0",
+  "smiles": "Cc1occc1C(=O)Nc2ccccc2",
+  "logS": -3.3
+ },
+ {
+  "id": "pt1",
+  "smiles": "CC(C)=CCCC(C)=CC(=O)",
+  "logS": -2.06
+ },
+ {
+  "id": "pt2",
+  "smiles": "c1ccc2c(c1)ccc3c2ccc4c5ccccc5ccc43",
+  "logS": -7.87
+ },
+ {
+  "id": "pt3",
+  "smiles": "c1ccsc1",
+  "logS": -1.33
+ },
+ {
+  "id": "pt4",
+  "smiles": "c2ccc1scnc1c2",
+  "logS": -1.5
+ },
+ {
+  "id": "pt5",
+  "smiles": "Clc1cc(Cl)c(c(Cl)c1)c2c(Cl)cccc2Cl",
+  "logS": -7.32
+ },
+ {
+  "id": "pt6",
+  "smiles": "CC12CCC3C(CCc4cc(O)ccc34)C2CCC1O",
+  "logS": -5.03
+ },
+ {
+  "id": "pt7",
+  "smiles": "ClC4=C(Cl)C5(Cl)C3C1CC(C2OC12)C3C4(Cl)C5(Cl)Cl",
+  "logS": -6.29
+ },
+ {
+  "id": "pt8",
+  "smiles": "O=C1CCCN1",
+  "logS": 1.07
+ },
+ {
+  "id": "pt9",
+  "smiles": "Clc1ccc2ccccc2c1",
+  "logS": -4.14
+ },
+ {
+  "id": "pt10",
+  "smiles": "CCCC=C",
+  "logS": -2.68
+ },
+ {
+  "id": "pt11",
+  "smiles": "CCC1(C(=O)NCNC1=O)c2ccccc2",
+  "logS": -2.64
+ },
+ {
+  "id": "pt12",
+  "smiles": "CCCCCCCCCCCCCC",
+  "logS": -7.96
+ },
+ {
+  "id": "pt13",
+  "smiles": "CC(C)Cl",
+  "logS": -1.41
+ },
+ {
+  "id": "pt14",
+  "smiles": "CCC(C)CO",
+  "logS": -0.47
+ },
+ {
+  "id": "pt15",
+  "smiles": "N#Cc1ccccc1",
+  "logS": -1.0
+ },
+ {
+  "id": "pt16",
+  "smiles": "CCOP(=S)(OCC)Oc1cc(C)nc(n1)C(C)C",
+  "logS": -3.64
+ },
+ {
+  "id": "pt17",
+  "smiles": "CCCCCCCCCC(C)O",
+  "logS": -2.94
+ },
+ {
+  "id": "pt18",
+  "smiles": "Clc1ccc(c(Cl)c1)c2c(Cl)ccc(Cl)c2Cl",
+  "logS": -7.43
+ },
+ {
+  "id": "pt19",
+  "smiles": "O=c2[nH]c1CCCc1c(=O)n2C3CCCCC3",
+  "logS": -4.594
+ },
+ {
+  "id": "pt20",
+  "smiles": "CCOP(=S)(OCC)SCSCC",
+  "logS": -4.11
+ },
+ {
+  "id": "pt21",
+  "smiles": "CCOc1ccc(NC(=O)C)cc1",
+  "logS": -2.35
+ },
+ {
+  "id": "pt22",
+  "smiles": "CCCCCCCO",
+  "logS": -1.81
+ },
+ {
+  "id": "pt23",
+  "smiles": "Cn1c(=O)n(C)c2nc[nH]c2c1=O",
+  "logS": -1.39
+ },
+ {
+  "id": "pt24",
+  "smiles": "CCCCC1(CC)C(=O)NC(=O)NC1=O",
+  "logS": -1.661
+ },
+ {
+  "id": "pt25",
+  "smiles": "ClC(Cl)=C(c1ccc(Cl)cc1)c2ccc(Cl)cc2",
+  "logS": -6.9
+ },
+ {
+  "id": "pt26",
+  "smiles": "CCCCCCCC(=O)OC",
+  "logS": -3.17
+ },
+ {
+  "id": "pt27",
+  "smiles": "CCc1ccc(CC)cc1",
+  "logS": -3.75
+ },
+ {
+  "id": "pt28",
+  "smiles": "CCOP(=S)(OCC)SCSC(C)(C)C",
+  "logS": -4.755
+ },
+ {
+  "id": "pt29",
+  "smiles": "COC(=O)Nc1cccc(OC(=O)Nc2cccc(C)c2)c1",
+  "logS": -4.805
+ },
+ {
+  "id": "pt30",
+  "smiles": "ClC(=C)Cl",
+  "logS": -1.64
+ },
+ {
+  "id": "pt31",
+  "smiles": "Cc1cccc2c1Cc3ccccc32",
+  "logS": -5.22
+ },
+ {
+  "id": "pt32",
+  "smiles": "CCCCC=O",
+  "logS": -0.85
+ },
+ {
+  "id": "pt33",
+  "smiles": "N(c1ccccc1)c2ccccc2",
+  "logS": -3.504
+ },
+ {
+  "id": "pt34",
+  "smiles": "CN(C)C(=O)SCCCCOc1ccccc1",
+  "logS": -3.927
+ },
+ {
+  "id": "pt35",
+  "smiles": "CCCOP(=S)(OCCC)SCC(=O)N1CCCCC1C",
+  "logS": -4.15
+ },
+ {
+  "id": "pt36",
+  "smiles": "CCCCCCCI",
+  "logS": -4.81
+ },
+ {
+  "id": "pt37",
+  "smiles": "c1c(Cl)cccc1c2ccccc2",
+  "logS": -4.88
+ },
+ {
+  "id": "pt38",
+  "smiles": "OCCCC=C",
+  "logS": -0.15
+ },
+ {
+  "id": "pt39",
+  "smiles": "O=C2NC(=O)C1(CCC1)C(=O)N2",
+  "logS": -1.655
+ },
+ {
+  "id": "pt40",
+  "smiles": "CC(C)C1CCC(C)CC1O",
+  "logS": -2.53
+ },
+ {
+  "id": "pt41",
+  "smiles": "CC(C)OC=O",
+  "logS": -0.63
+ },
+ {
+  "id": "pt42",
+  "smiles": "CCCCCC(C)O",
+  "logS": -1.55
+ },
+ {
+  "id": "pt43",
+  "smiles": "CC(=O)Nc1ccc(Br)cc1",
+  "logS": -3.083
+ },
+ {
+  "id": "pt44",
+  "smiles": "c1ccccc1n2ncc(N)c(Br)c2(=O)",
+  "logS": -3.127
+ },
+ {
+  "id": "pt45",
+  "smiles": "c2c(C)cc1nc(C)ccc1c2",
+  "logS": -1.94
+ },
+ {
+  "id": "pt46",
+  "smiles": "CCCCCCC#C",
+  "logS": -3.66
+ },
+ {
+  "id": "pt47",
+  "smiles": "CCC1(C(=O)NC(=O)NC1=O)C2=CCCCC2",
+  "logS": -2.17
+ }
+]

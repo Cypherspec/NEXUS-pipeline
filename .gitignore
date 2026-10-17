@@ -18,3 +18,12 @@ results/*.log
 results/raw_v2/
 paper_tabular/main.pdf
 data/go/
+
+# LaTeX build intermediates
+paper/*.aux
+paper/*.log
+paper/*.out
+
+# Mantis screenshot harness build artefacts (node_modules is a local symlink)
+mantis/harness/node_modules
+mantis/harness/bundle.js
