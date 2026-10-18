@@ -88,8 +88,9 @@ export const StatTile: React.FC<{
         : tone === 'warn' ? theme.warn
             : tone === 'crit' ? theme.crit : theme.text;
     return (
-        <div className="rounded-lg px-2.5 py-2"
-            style={{ background: theme.surfaceInset, border: `1px solid ${theme.line}` }}>
+        <div className="px-2.5 py-2"
+            style={{ background: theme.surfaceInset, border: `1px solid ${theme.line}`,
+                borderRadius: 12 }}>
             <div className="text-[9.5px] uppercase tracking-[0.14em]" style={{ color: theme.text3 }}>
                 {label}
             </div>

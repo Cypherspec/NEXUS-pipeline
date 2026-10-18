@@ -1,8 +1,46 @@
 /*
- * Panel chrome. Colours that vary with the theme are set inline from the
- * shared token module, so this file carries only layout and the handful of
- * element resets the sandboxed iframe needs.
+ * Panel chrome, matched to the Mantis workspace.
+ *
+ * The panel renders in a sandboxed iframe with its own document, so it
+ * inherits none of the host's custom properties and none of its loaded fonts.
+ * Mantis's workspace tokens are therefore restated here by value, against
+ * src/styles/design-tokens.css, and the font stack falls back through the same
+ * chain Mantis uses so a locally available Inter is picked up when there is
+ * one. Colours that vary by theme come from the shared token module inline;
+ * this file carries layout, type and the few resets the iframe needs.
  */
+
+:root {
+    /* --workspace-* , dark */
+    --nx-canvas: #0f1014;
+    --nx-panel: #191a1f;
+    --nx-panel-raised: #24262c;
+    --nx-chrome: #1e1f25;
+    --nx-chrome-selected: #1a2f52;
+    --nx-border: #2b2d35;
+    --nx-foreground: #eeeef2;
+    --nx-muted: #a2a5b0;
+    --nx-accent: #5b9dff;
+
+    /* --workspace-radius-*, --workspace-gap, --workspace-shadow-panel */
+    --nx-radius-panel: 12px;
+    --nx-radius-control: 8px;
+    --nx-gap: 6px;
+    --nx-shadow-panel: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.18);
+
+    /* --font-family-*, --font-size-*, --line-height-* */
+    --nx-font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --nx-font-display: "Space Grotesk", Inter, ui-sans-serif, system-ui, sans-serif;
+    --nx-font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --nx-text-2xs: 0.625rem;
+    --nx-text-xs: 0.75rem;
+    --nx-text-sm: 0.875rem;
+    --nx-leading-snug: 1.375;
+    --nx-leading-normal: 1.5;
+
+    /* --motion-duration-fast, --motion-ease-standard */
+    --nx-motion: 150ms cubic-bezier(0.2, 0, 0, 1);
+}
 
 * { box-sizing: border-box; }
 
@@ -12,16 +50,17 @@ html, body {
 }
 
 /* The host mounts the panel into its own container, not necessarily #root, so
- * the root cannot inherit a percentage height through it: a chain of
- * height:100% resolves against an auto-height parent and collapses to zero.
- * Size against the viewport instead, which is the iframe itself. */
-#root {
-    min-height: 100vh;
-}
+ * a chain of height:100% resolves against an auto-height parent and collapses
+ * to zero. Size against the viewport, which here is the iframe itself. */
+#root { min-height: 100vh; }
 
 body {
-    font: 13px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
-    background: #07090d;
+    font-family: var(--nx-font-sans);
+    font-size: var(--nx-text-xs);
+    line-height: var(--nx-leading-normal);
+    background: var(--nx-canvas);
+    color: var(--nx-foreground);
+    -webkit-font-smoothing: antialiased;
 }
 
 .nexus-root {
@@ -29,42 +68,64 @@ body {
     flex-direction: column;
     height: 100vh;
     overflow: hidden;
+    background: var(--nx-canvas);
 }
 
-.nexus-root header { flex: 0 0 auto; padding: 10px 12px 8px; }
+/* --- Header ------------------------------------------------------------- */
 
-.nexus-head { display: flex; align-items: center; gap: 8px; }
+.nexus-root header {
+    flex: 0 0 auto;
+    padding: 12px 12px 10px;
+}
+
+.nexus-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
 
 .nexus-mark {
-    font-size: 15px;
+    font-family: var(--nx-font-display);
+    font-size: 1rem;
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
 }
 
 .nexus-chip {
     font-size: 9px;
+    font-weight: 500;
     text-transform: uppercase;
-    letter-spacing: 0.12em;
-    border-radius: 999px;
-    padding: 2px 6px;
+    letter-spacing: 0.1em;
+    border-radius: 9999px;
+    padding: 2px 7px;
 }
 
-.nexus-count { margin-left: auto; font-size: 10px; font-variant-numeric: tabular-nums; }
+.nexus-count {
+    margin-left: auto;
+    font-size: var(--nx-text-2xs);
+    font-variant-numeric: tabular-nums;
+}
 
-.nexus-sub { margin: 4px 0 0; font-size: 10px; }
+.nexus-sub {
+    margin: 5px 0 0;
+    font-size: var(--nx-text-2xs);
+    line-height: var(--nx-leading-snug);
+}
+
+/* --- Controls ----------------------------------------------------------- */
 
 .nexus-controls {
     flex: 0 0 auto;
     display: grid;
-    gap: 8px;
-    padding: 8px 12px 10px;
+    gap: var(--nx-gap);
+    padding: 0 12px 12px;
 }
 
 .nexus-tabs {
     display: flex;
     gap: 2px;
-    border-radius: 8px;
-    padding: 2px;
+    border-radius: var(--nx-radius-control);
+    padding: 3px;
 }
 
 .nexus-tabs button {
@@ -72,71 +133,134 @@ body {
     border: 0;
     border-radius: 6px;
     background: transparent;
-    padding: 5px 0;
+    padding: 6px 0;
     font: inherit;
     font-size: 11px;
     font-weight: 500;
     cursor: pointer;
+    transition: background var(--nx-motion), color var(--nx-motion);
+}
+
+.nexus-tabs button:hover:not([aria-pressed="true"]) {
+    background: rgb(255 255 255 / 0.05);
 }
 
 .nexus-row {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 10px;
+    font-size: var(--nx-text-2xs);
 }
 
-.nexus-row label {
+.nexus-row > label {
     text-transform: uppercase;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.1em;
+    font-weight: 500;
 }
 
 .nexus-row select,
 .nexus-row input[type="number"] {
     border: 1px solid;
     border-radius: 6px;
-    padding: 4px 6px;
+    padding: 5px 7px;
     font: inherit;
-    font-size: 10px;
+    font-size: var(--nx-text-2xs);
+    transition: border-color var(--nx-motion);
+}
+
+.nexus-row select:focus-visible,
+.nexus-row input:focus-visible,
+.nexus-tabs button:focus-visible,
+.nexus-run:focus-visible,
+.nexus-families button:focus-visible {
+    outline: 2px solid var(--nx-accent);
+    outline-offset: 2px;
 }
 
 .nexus-check {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 10px;
-    text-transform: none;
-    letter-spacing: 0;
+    font-size: var(--nx-text-2xs);
+    line-height: var(--nx-leading-snug);
 }
+
+.nexus-check input { accent-color: var(--nx-accent); }
 
 .nexus-run {
     border: 0;
-    border-radius: 8px;
-    padding: 9px 12px;
+    border-radius: var(--nx-radius-control);
+    padding: 10px 12px;
     font: inherit;
-    font-size: 11px;
+    font-size: 11.5px;
     font-weight: 600;
+    letter-spacing: 0.01em;
     cursor: pointer;
+    box-shadow: var(--nx-shadow-panel);
+    transition: filter var(--nx-motion), box-shadow var(--nx-motion);
 }
 
-.nexus-run:disabled { cursor: not-allowed; }
+.nexus-run:hover:not(:disabled) { filter: brightness(1.06); }
+.nexus-run:disabled { cursor: not-allowed; box-shadow: none; }
 
-.nexus-hint { margin: 0; font-size: 10px; line-height: 1.5; }
+.nexus-hint {
+    margin: 0;
+    font-size: var(--nx-text-2xs);
+    line-height: var(--nx-leading-snug);
+}
 
-.nexus-body { flex: 1 1 auto; overflow: auto; padding: 10px 12px 16px; }
+/* --- Body --------------------------------------------------------------- */
 
-.nexus-stack { display: grid; gap: 14px; }
+.nexus-body {
+    flex: 1 1 auto;
+    overflow: auto;
+    padding: 2px 12px 18px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--nx-border) transparent;
+}
 
-.nexus-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.nexus-body::-webkit-scrollbar { width: 9px; }
+.nexus-body::-webkit-scrollbar-thumb {
+    background: var(--nx-border);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
 
-.nexus-error { border-radius: 8px; padding: 8px 10px; font-size: 10px; }
+.nexus-stack { display: grid; gap: 16px; }
 
-.nexus-families { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.nexus-tiles {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--nx-gap);
+}
+
+.nexus-error {
+    border-radius: var(--nx-radius-control);
+    padding: 9px 11px;
+    font-size: var(--nx-text-2xs);
+    line-height: var(--nx-leading-snug);
+}
+
+.nexus-families {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 8px;
+}
 
 .nexus-families button {
     border-radius: 6px;
-    padding: 3px 7px;
+    padding: 4px 8px;
     font: inherit;
-    font-size: 10px;
+    font-size: var(--nx-text-2xs);
+    font-family: var(--nx-font-mono);
     cursor: pointer;
+    transition: border-color var(--nx-motion), background var(--nx-motion);
 }
+
+.nexus-families button:hover { background: var(--nx-chrome-selected); }
+
+/* Monospace for anything that is a structure or a measured value, matching
+ * how the Inspector renders the same strings. */
+.nexus-root table { font-family: var(--nx-font-mono); }

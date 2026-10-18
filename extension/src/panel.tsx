@@ -146,6 +146,33 @@ const NexusExtensionPanel: React.FC = () => {
                     'selection.changed', {}, (payload: any) => {
                         setSelectedIds(payload?.selected ?? []);
                     }));
+
+                // A map streams its points in, so the first read can land
+                // before any have arrived and report an empty map. Re-read
+                // when the set of maps changes, and poll briefly at the start
+                // until points show up rather than reporting zero.
+                disposables.current.push(await window.mantis.events.subscribe(
+                    'maps.changed', {}, async () => {
+                        const refreshed = await window.mantis.maps.getPoints(id);
+                        const list = Array.isArray(refreshed)
+                            ? refreshed : (refreshed?.points ?? []);
+                        // An empty answer here means the map is still
+                        // streaming, not that it has no points. Keeping the
+                        // previous read is the difference between a panel that
+                        // settles on 400 molecules and one that drops to zero.
+                        if (!cancelled && list.length) setPoints(list);
+                    }));
+
+                for (let attempt = 0; attempt < 10; attempt += 1) {
+                    if (cancelled) break;
+                    const current = await window.mantis.maps.getPoints(id);
+                    const list = Array.isArray(current) ? current : (current?.points ?? []);
+                    if (list.length) {
+                        setPoints(list);
+                        break;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                }
             } catch (e) {
                 if (!cancelled) setError((e as Error).message);
             }

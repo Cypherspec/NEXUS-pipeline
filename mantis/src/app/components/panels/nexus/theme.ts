@@ -45,44 +45,55 @@ export interface NexusTheme {
 }
 
 const DARK: NexusTheme = {
-    bg: '#07090d',
-    surface: '#0a0d12',
-    surfaceInset: '#10151d',
-    line: 'rgba(255, 255, 255, 0.07)',
-    lineStrong: 'rgba(255, 255, 255, 0.16)',
-    text: '#e9eff8',
-    text2: '#93a4ba',
-    text3: '#5d6e84',
-    grid: 'rgba(255, 255, 255, 0.055)',
+    // These are Mantis's own workspace tokens, copied by value rather than
+    // referenced. The panel runs in a sandboxed iframe with its own document,
+    // so it inherits none of the host's custom properties; copying keeps the
+    // panel in step with the chrome around it, and any drift is a one-line
+    // change here against src/styles/design-tokens.css.
+    bg: '#0f1014',                                  // --workspace-canvas
+    surface: '#191a1f',                             // --workspace-panel
+    surfaceInset: '#24262c',                        // --workspace-panel-raised
+    line: '#2b2d35',                                // --workspace-border
+    lineStrong: '#434652',                          // --workspace-border-strong
+    text: '#eeeef2',                                // --workspace-foreground
+    text2: '#a2a5b0',                               // --workspace-muted
+    text3: '#777b87',                               // between muted and border-strong
+    grid: 'rgba(255, 255, 255, 0.06)',
+    // Chrome and data marks are not the same job. Mantis's workspace tones
+    // are accents for chrome, and as a categorical set on #191a1f they fail
+    // the lightness band and sit in the colour-vision warn band (green/amber
+    // dE 6.7 protan). Data marks therefore use a set validated against this
+    // surface -- worst all-pairs CVD dE 9.4, normal-vision 20.9 -- while the
+    // accent, gradient and status colours below stay Mantis's own.
     series: ['#3987e5', '#d95926', '#199e70'],
-    // Monotone increasing lightness, one hue: on a near-black surface the low
-    // end must be dim and the high end bright, not the other way round.
-    ramp: ['#0f2d52', '#164a85', '#1d68b8', '#3987e5', '#67a9f0', '#9bc9f8', '#d4e8ff'],
-    accent: '#4f9dff',
-    good: '#199e70',
-    warn: '#c98500',
-    crit: '#e66767',
-    gradient: 'linear-gradient(104deg, #a5dbff 0%, #4f9dff 46%, #7b7cff 100%)',
-    tooltipBg: 'rgba(12, 17, 24, 0.96)',
+    // Single hue, dim to bright on a dark surface, anchored on the azure the
+    // workspace accents with.
+    ramp: ['#17243a', '#1d3a66', '#245593', '#006aff', '#5b9dff', '#8dbaff', '#cbdfff'],
+    accent: '#5b9dff',                              // --workspace-accent
+    good: '#3ed68c',                                // --workspace-tone-green
+    warn: '#ffb84d',                                // --workspace-tone-amber
+    crit: '#ff7aa8',                                // --workspace-tone-rose
+    gradient: 'linear-gradient(104deg, #8dbaff 0%, #5b9dff 46%, #a990ff 100%)',
+    tooltipBg: 'rgba(25, 26, 31, 0.97)',
 };
 
 const LIGHT: NexusTheme = {
-    bg: '#ffffff',
-    surface: '#ffffff',
-    surfaceInset: '#f5f7fa',
-    line: 'rgba(15, 23, 42, 0.1)',
-    lineStrong: 'rgba(15, 23, 42, 0.22)',
-    text: '#0b1220',
-    text2: '#51607a',
-    text3: '#7c8aa0',
-    grid: 'rgba(15, 23, 42, 0.07)',
-    series: ['#2a78d6', '#eb6834', '#1baf7a'],
-    ramp: ['#cde2fb', '#9ec5f4', '#6da7ec', '#3987e5', '#2a78d6', '#1c5cab', '#104281'],
-    accent: '#2a78d6',
-    good: '#1baf7a',
-    warn: '#eda100',
-    crit: '#e34948',
-    gradient: 'linear-gradient(104deg, #1c5cab 0%, #2a78d6 46%, #5250c7 100%)',
+    bg: '#eceef3',                                  // --workspace-canvas
+    surface: '#ffffff',                             // --workspace-panel
+    surfaceInset: '#f3f5f9',                        // --workspace-panel-raised
+    line: '#dfe2ea',                                // --workspace-border
+    lineStrong: '#c0c5d1',                          // --workspace-border-strong
+    text: '#171717',                                // --workspace-foreground
+    text2: '#5f636e',                               // --workspace-muted
+    text3: '#8b8f9a',
+    grid: 'rgba(23, 23, 23, 0.07)',
+    series: ['#006aff', '#d17a00', '#0a9a4e'],
+    ramp: ['#dce8ff', '#b6d0ff', '#84b2ff', '#3f8bff', '#006aff', '#0054cc', '#003a8c'],
+    accent: '#006aff',                              // --mantis-azure
+    good: '#0a9a4e',
+    warn: '#d17a00',
+    crit: '#e11d6a',
+    gradient: 'linear-gradient(104deg, #0054cc 0%, #006aff 46%, #7c4dff 100%)',
     tooltipBg: 'rgba(255, 255, 255, 0.97)',
 };
 
