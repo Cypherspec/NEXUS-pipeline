@@ -1,19 +1,58 @@
-\section{Integration}
+\section{Integration with Mantis}
 
-The pipeline ships as a panel for Mantis, a map interface for exploring large
-collections. The panel reads the structures behind selected points, computes
-descriptors and scaffolds, colours the map by any of them, proposes the next batch to
-assay, and returns predictions with conformal intervals. No file in the Mantis
-repository is modified: three files are added and three short registrations are
-documented as exact diffs. Typechecked against the real Mantis tree with its own
-dependencies and path aliases, the panel contributes zero errors.
+The pipeline ships as a packaged extension for Mantis, a map interface for
+exploring large collections. Installing it modifies nothing: the package goes in
+through the application's own Import Extension dialog, which validates the
+manifest, states the permissions and the backend actions, and asks for consent.
+An earlier version of this work copied three files into the Mantis source and
+documented three registrations as diffs; the extension mechanism makes that
+unnecessary, and a reader can install the result without a patch.
+
+The package is a sandboxed panel, a worker host, and a Python backend that is
+the \texttt{nexus} package itself, vendored beside its entry point. There is no
+service to run and no port to configure. Mantis caps a backend invocation at
+thirty seconds, so each action bounds its own input and reports what it dropped
+rather than truncating in silence.
+
+\paragraph{Results return to the map, not to a table.}
+The extension API has no call for colouring points, which turned out to be a
+useful constraint. Results are instead expressed in the vocabulary the
+application already has: a scaffold family becomes a named bag and is
+highlighted, a proposed assay batch becomes the selection, and the Tanimoto
+neighbours of a clicked molecule become an edge overlay the panel owns and
+releases when it closes. A chemist reading the map sees the answer in the same
+terms as everything else on it.
 
 \begin{figure}[t]
 \centering
-\fbox{\includegraphics[width=0.98\linewidth]{02_analyze_results}}
-\caption{The panel against the live service. Descriptors, scaffold families and the
-map colouring are computed by the NumPy package described here.}
+\fbox{\includegraphics[height=0.38\textheight]{ext_02_analyze}}
+\caption{The panel on 220 molecules. The rotating projection carries the map's
+own fingerprint PCA to a third component; the conformer below it is a
+distance-geometry embedding relaxed under the out-of-plane term. Both are SVG,
+so the package stays small enough to ship as text.}
 \end{figure}
+
+\begin{figure}[t]
+\centering
+\fbox{\includegraphics[height=0.38\textheight]{ext_08_shape}}
+\caption{Shape mode. Bonds are coloured by Ollivier--Ricci curvature on a
+diverging scale centred at zero, beside the persistence diagram of the same
+conformer: eight loops for a structure with thirty-six ring bonds.}
+\end{figure}
+
+\paragraph{What the integration cost.}
+Two failures are worth recording because neither produces an error. The panel's
+chart components use utility classes that the host supplies in-tree and an
+extension iframe does not, so every class was inert and the layout collapsed
+into run-together text; the package now ships the enumerated set those
+components reference, and the build fails if one is missing. And inside the dock
+the panel iframe paints its background while every element in it measures
+$0 \times 0$ --- layout is suppressed for the whole document, \texttt{html}
+included. That is not the stylesheet, whose computed height resolves correctly,
+and not this package: the application's own reference extension does not render
+there either. Installation, permissions, backend dispatch and SDK access are
+verified in the running application; the figures above are the same bundle and
+the same Python driven through a harness.
 
 \section{Limitations}
 
