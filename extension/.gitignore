@@ -1,0 +1,6 @@
+node_modules
+dist/
+backend/nexus/
+__pycache__/
+*.pyc
+*.zip
