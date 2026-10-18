@@ -17,8 +17,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client';
 
 import {
-    CoverageBar, Histogram, IntervalStrip, RankedBars, RuleDots, ScatterPlot,
-    StatTile, useNumberFormat, type ScatterDatum,
+    CoverageBar, Histogram, IntervalStrip, PersistenceDiagram, RankedBars, RuleDots,
+    ScatterPlot, StatTile, useNumberFormat,
+    type PersistenceFeature, type ScatterDatum,
 } from '../../mantis/src/app/components/panels/nexus/charts';
 import {
     Molecule3D, Space3D, type ConformerAtom, type ConformerBond, type SpacePoint,
@@ -31,7 +32,7 @@ const SMILES_KEYS = ['smiles', 'SMILES', 'Smiles', 'canonical_smiles', 'structur
 /** Bag this panel writes scaffold families into, so it only clears its own. */
 const BAG_PREFIX = 'NEXUS scaffold';
 
-type Mode = 'analyze' | 'screen' | 'predict';
+type Mode = 'analyze' | 'screen' | 'predict' | 'shape';
 type Phase = 'idle' | 'running' | 'done' | 'error';
 
 interface MantisPoint {
@@ -62,6 +63,19 @@ interface ScreenResult {
     nMeasured: number;
     nPool: number;
     rationale: string;
+}
+
+interface ShapeResult {
+    smiles: string;
+    formula: string;
+    atoms: { symbol: string; x: number; y: number; z: number }[];
+    bonds: { a: number; b: number; order: number; inRing: boolean;
+             ollivier: number; forman: number }[];
+    features: PersistenceFeature[];
+    h1: Record<string, number>;
+    curvature: { min: number; max: number; mean: number; magnitude: number };
+    restraintError: number;
+    ringBonds: number;
 }
 
 interface PredictResult {
@@ -120,6 +134,8 @@ const NexusExtensionPanel: React.FC = () => {
     const [analysis, setAnalysis] = useState<AnalyzeResult | null>(null);
     const [batch, setBatch] = useState<ScreenResult | null>(null);
     const [prediction, setPrediction] = useState<PredictResult | null>(null);
+    const [shapeResult, setShapeResult] = useState<ShapeResult | null>(null);
+    const [shapeTarget, setShapeTarget] = useState<string>('');
 
     const [labelColumn, setLabelColumn] = useState('');
     const [batchSize, setBatchSize] = useState(24);
@@ -287,6 +303,19 @@ const NexusExtensionPanel: React.FC = () => {
                     await window.mantis.selection.set(result.batch.map(b => b.id), mapId ?? undefined);
                     setNote(`Selected the ${result.batch.length} proposed molecules on the map.`);
                 }
+            } else if (mode === 'shape') {
+                // One molecule at a time: persistence over a conformer is the
+                // most expensive thing this backend does, and the answer is
+                // about a single structure rather than about the set.
+                const chosen = shapeTarget || selectedIds
+                    .map(id => pointById.get(id))
+                    .map(point => (point ? smilesOf(point) : null))
+                    .find(Boolean);
+                // With nothing named, hand the backend the scope and let it
+                // pick the most ring-rich structure, which is the one with
+                // topology worth showing.
+                setShapeResult(await window.mantis.backend.invoke('shape',
+                    chosen ? { smiles: chosen } : { molecules }));
             } else {
                 setPrediction(await window.mantis.backend.invoke('predict', {
                     molecules, measured, alpha: 0.1, adaptive,
@@ -297,7 +326,8 @@ const NexusExtensionPanel: React.FC = () => {
             setPhase('error');
             setError((e as Error).message);
         }
-    }, [adaptive, batchSize, mapId, measured, mode, molecules]);
+    }, [adaptive, batchSize, colourBy, mapId, measured, mode, molecules, pointById,
+        selectedIds, shapeTarget]);
 
     /** Puts one scaffold family on the map as a highlighted bag. */
     const highlightFamily = useCallback(async (family: { scaffold: string; pointIds: string[] }) => {
@@ -370,13 +400,14 @@ const NexusExtensionPanel: React.FC = () => {
                 background: theme.surface }}>
                 <div className="nexus-tabs" style={{ background: theme.surfaceInset,
                     border: `1px solid ${theme.line}` }}>
-                    {(['analyze', 'screen', 'predict'] as const).map(key => (
+                    {(['analyze', 'screen', 'predict', 'shape'] as const).map(key => (
                         <button key={key} type="button" onClick={() => setMode(key)}
                             aria-pressed={mode === key}
                             style={mode === key
                                 ? { background: theme.accent, color: '#fff' }
                                 : { color: theme.text2 }}>
-                            {key === 'analyze' ? 'Analyze' : key === 'screen' ? 'Next batch' : 'Predict'}
+                            {key === 'analyze' ? 'Analyze' : key === 'screen' ? 'Next batch'
+                                : key === 'predict' ? 'Predict' : 'Shape'}
                         </button>
                     ))}
                 </div>
@@ -413,6 +444,19 @@ const NexusExtensionPanel: React.FC = () => {
                     </div>
                 )}
 
+                {mode === 'shape' && (
+                    <div className="nexus-row">
+                        <label style={{ color: theme.text3 }}>Molecule</label>
+                        <select value={shapeTarget} onChange={e => setShapeTarget(e.target.value)}
+                            style={{ ...inputStyle, maxWidth: '14rem' }}>
+                            <option value="">most ring-rich in scope</option>
+                            {molecules.slice(0, 200).map(m => (
+                                <option key={m.id} value={m.smiles}>{m.smiles.slice(0, 32)}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
+
                 <label className="nexus-check" style={{ color: theme.text3 }}>
                     <input type="checkbox" checked={linkNeighbours}
                         onChange={e => setLinkNeighbours(e.target.checked)} />
@@ -427,7 +471,8 @@ const NexusExtensionPanel: React.FC = () => {
                     {phase === 'running' ? 'Working…'
                         : mode === 'analyze' ? `Analyze ${molecules.length}`
                             : mode === 'screen' ? `Propose ${batchSize} to screen`
-                                : 'Predict unmeasured'}
+                                : mode === 'predict' ? 'Predict unmeasured'
+                                    : 'Analyse shape'}
                 </button>
 
                 {molecules.length === 0 && (
@@ -573,7 +618,47 @@ const NexusExtensionPanel: React.FC = () => {
                     </div>
                 )}
 
-                {phase === 'idle' && !analysis && !batch && !prediction && (
+                {mode === 'shape' && shapeResult && (
+                    <div className="nexus-stack nexus-enter">
+                        <div className="nexus-tiles">
+                            <StatTile label="Loops (H1)"
+                                value={String(shapeResult.features.filter(f => f.dim === 1).length)}
+                                hint="long-lived features are rings" theme={theme} />
+                            <StatTile label="Ring bonds" value={String(shapeResult.ringBonds)}
+                                hint={shapeResult.formula} theme={theme} />
+                            <StatTile label="Mean curvature"
+                                value={shapeResult.curvature.mean.toFixed(3)}
+                                tone={Math.abs(shapeResult.curvature.mean) < 1e-9 ? 'good' : 'default'}
+                                hint="zero everywhere on a cycle" theme={theme} />
+                            <StatTile label="Restraint error"
+                                value={shapeResult.restraintError.toFixed(3)}
+                                tone={shapeResult.restraintError < 0.05 ? 'good' : 'warn'}
+                                hint="conformer embedding residual" theme={theme} />
+                        </div>
+
+                        <Molecule3D
+                            atoms={shapeResult.atoms.map(a => ({
+                                ...a, radius: 0.72, aromatic: false, hydrogens: 0,
+                            }))}
+                            bonds={shapeResult.bonds}
+                            formula={shapeResult.formula}
+                            bondValues={shapeResult.bonds.map(b => b.ollivier)}
+                            bondMagnitude={shapeResult.curvature.magnitude}
+                            bondValueLabel="Ollivier–Ricci curvature"
+                            theme={theme} />
+
+                        <PersistenceDiagram features={shapeResult.features} theme={theme} />
+
+                        <p className="nexus-hint" style={{ color: theme.text3 }}>
+                            Persistence is computed on the 3D conformer, curvature on the bond
+                            graph with an exact transportation simplex. A cycle graph has
+                            curvature exactly zero, so an unstrained ring reads flat and a fused
+                            or branched position does not.
+                        </p>
+                    </div>
+                )}
+
+                {phase === 'idle' && !analysis && !batch && !prediction && !shapeResult && (
                     <div className="nexus-stack nexus-enter">
                         <p style={{ color: theme.text2, fontSize: 11, lineHeight: 1.6 }}>
                             NEXUS reads the molecules behind the points on this map. Results go back

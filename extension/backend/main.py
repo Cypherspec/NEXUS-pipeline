@@ -330,6 +330,116 @@ def space3d(payload: dict, ctx: dict) -> dict:
             "colourBy": colour_key, "nDropped": dropped}
 
 
+def shape(payload: dict, ctx: dict) -> dict:
+    """Topology and curvature of one molecule.
+
+    Two shape descriptions the pipeline computes and nothing in the map shows:
+
+    Persistent homology of the 3D conformer, where a long-lived H1 feature is a
+    ring -- benzene gives exactly one, acyclic octane none, which is the check
+    the paper reports.
+
+    Ollivier-Ricci curvature of the bond graph, computed with an exact
+    transportation simplex rather than an entropic approximation. It is signed,
+    and zero is meaningful: a cycle graph has curvature exactly zero, so a
+    benzene ring reads flat while a fused or branched position does not.
+    """
+    import numpy as _np
+
+    from nexus.chem.conformer import embed_molecule
+    from nexus.chem.smiles import parse_smiles
+    from nexus.topo.homology import diagram_statistics, rips_persistence
+    from nexus.topo.ricci import forman_ricci_curvature, ollivier_ricci_curvature
+
+    text = payload.get("smiles")
+    if not isinstance(text, str) or not text.strip():
+        # No molecule named: answer about the most structurally interesting one
+        # in scope rather than the first, which is an arbitrary choice and is
+        # usually a small acyclic fragment with no topology to show. Ring bonds
+        # rank it, with size as the tie-break.
+        candidates, candidate_smiles, _, _ = _structures(payload, 400)
+        if not candidates:
+            raise PayloadError("'smiles' must be given, or 'molecules' to choose from")
+        ranked = sorted(
+            zip(candidates, candidate_smiles),
+            key=lambda pair: (sum(1 for b in pair[0].bonds if b.in_ring),
+                              pair[0].n_atoms),
+            reverse=True)
+        mol, text = ranked[0][0], ranked[0][1]
+        if mol.n_atoms > 60:
+            # Fall back to the largest structure that fits the budget.
+            inside = [pair for pair in ranked if pair[0].n_atoms <= 60]
+            if not inside:
+                raise PayloadError("every molecule in scope is too large for the shape analysis")
+            mol, text = inside[0]
+    else:
+        text = text.strip()
+        try:
+            mol = parse_smiles(text)
+        except Exception as exc:                               # noqa: BLE001
+            raise PayloadError(f"could not parse that structure: {exc}") from exc
+    # Rips persistence builds simplices over every point, so the cost climbs
+    # steeply; the cap keeps a single call well inside the 30 s budget.
+    if mol.n_atoms > 60:
+        raise PayloadError("structure is too large for the shape analysis")
+
+    xyz, restraint_error = embed_molecule(mol, seed=int(payload.get("seed", 0)))
+    xyz = _np.asarray(xyz, dtype=float)
+
+    diagram = rips_persistence(xyz, max_dim=1)
+    # diagram.points is keyed by homology dimension, each value an array of
+    # (birth, death) pairs. An infinite death is the component that never
+    # merges; it carries no scale and is dropped rather than drawn at the edge.
+    features = []
+    for dim, pairs in diagram.points.items():
+        for birth, death in _np.asarray(pairs, dtype=float).reshape(-1, 2):
+            if not _np.isfinite(death):
+                continue
+            features.append({"dim": int(dim), "birth": float(birth),
+                             "death": float(death), "life": float(death - birth)})
+    features.sort(key=lambda f: -f["life"])
+
+    ollivier = ollivier_ricci_curvature(mol)
+    forman = forman_ricci_curvature(mol)
+    bonds = []
+    for bond in mol.bonds:
+        key = (bond.a, bond.b) if (bond.a, bond.b) in ollivier else (bond.b, bond.a)
+        bonds.append({
+            "a": int(bond.a), "b": int(bond.b), "order": int(bond.order),
+            "inRing": bool(bond.in_ring),
+            "ollivier": float(ollivier.get(key, 0.0)),
+            "forman": float(forman.get(key, 0.0)),
+        })
+
+    curvatures = [b["ollivier"] for b in bonds]
+    centred = xyz - xyz.mean(axis=0, keepdims=True)
+    extent = float(_np.abs(centred).max()) or 1.0
+    return {
+        "smiles": text, "formula": mol.formula(),
+        "atoms": [{"symbol": a.symbol, "x": float(centred[i, 0] / extent),
+                   "y": float(centred[i, 1] / extent),
+                   "z": float(centred[i, 2] / extent)}
+                  for i, a in enumerate(mol.atoms)],
+        "bonds": bonds,
+        # Cap per dimension, not globally. A 42-atom molecule has 41 H0
+        # features whose lifetimes all exceed any loop's, so a single
+        # most-persistent-40 cut silently drops every H1 feature -- the one
+        # thing this view exists to show.
+        "features": ([f for f in features if f["dim"] == 1][:30]
+                     + [f for f in features if f["dim"] != 1][:30]),
+        "h1": {k: float(v) for k, v in diagram_statistics(diagram, 1).items()},
+        "h0": {k: float(v) for k, v in diagram_statistics(diagram, 0).items()},
+        "curvature": {
+            "min": min(curvatures) if curvatures else 0.0,
+            "max": max(curvatures) if curvatures else 0.0,
+            "mean": float(_np.mean(curvatures)) if curvatures else 0.0,
+            "magnitude": max((abs(c) for c in curvatures), default=0.0),
+        },
+        "restraintError": float(restraint_error),
+        "ringBonds": int(sum(1 for b in mol.bonds if b.in_ring)),
+    }
+
+
 _ACTIONS = {
     "analyze": analyze,
     "neighbors": neighbors,
@@ -337,6 +447,7 @@ _ACTIONS = {
     "predict": predict,
     "conformer": conformer,
     "space3d": space3d,
+    "shape": shape,
 }
 
 

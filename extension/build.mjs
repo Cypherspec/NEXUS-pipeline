@@ -78,7 +78,40 @@ function clean(dir) {
 }
 clean(path.join(here, 'backend'));
 
-// 4. Check the limits Mantis enforces, then zip.
+// 4. Every utility class the panel references must be defined in the
+// stylesheet we ship. In-tree the host's Tailwind supplies these; in an
+// extension iframe nothing does, and an undefined class is silent -- the
+// layout just collapses. Checking it here turns that into a build failure.
+{
+    const sources = [
+        path.join(repo, 'mantis/src/app/components/panels/nexus/charts.tsx'),
+        path.join(repo, 'mantis/src/app/components/panels/nexus/three.tsx'),
+        path.join(here, 'src/panel.tsx'),
+    ];
+    const used = new Set();
+    for (const file of sources) {
+        const text = readFileSync(file, 'utf8');
+        for (const match of text.matchAll(/className="([^"$]+)"/g)) {
+            for (const token of match[1].split(/\s+/)) {
+                if (token && !token.startsWith('nexus-')) used.add(token);
+            }
+        }
+    }
+    const stylesheet = readFileSync(path.join(here, 'src/utilities.css'), 'utf8');
+    // Class selectors in the stylesheet, with CSS escapes removed so
+    // `.text-\[10px\]` matches the `text-[10px]` written in the markup.
+    const defined = new Set(
+        [...stylesheet.matchAll(/^\.([^\s,{]+)/gm)].map(m => m[1].replace(/\\/g, '')));
+    const missing = [...used].filter(name => !defined.has(name)).sort();
+    if (missing.length) {
+        console.error('utility classes used by the panel but not shipped:');
+        for (const name of missing) console.error(`  ${name}`);
+        process.exit(1);
+    }
+    console.log(`utilities      ${used.size} classes used, all defined`);
+}
+
+// 5. Check the limits Mantis enforces, then zip.
 const decoder = new TextDecoder('utf-8', { fatal: true });
 let total = 0;
 const offenders = [];

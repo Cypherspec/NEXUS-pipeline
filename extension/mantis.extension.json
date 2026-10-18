@@ -3,7 +3,7 @@
     "apiVersion": "1.0.0",
     "id": "nexus.drug-discovery",
     "name": "NEXUS Drug Discovery",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "publisher": "Nischay Kommisetty",
     "description": "Reads the molecules behind the points on a map: descriptors and drug-likeness, scaffold families as bags, chemical neighbours as edges, the next batch worth assaying, and property predictions with calibrated conformal intervals.",
     "main": "dist/extension.js",
@@ -51,7 +51,8 @@
             "screen",
             "predict",
             "conformer",
-            "space3d"
+            "space3d",
+            "shape"
         ]
     }
 }

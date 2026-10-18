@@ -5,6 +5,7 @@
  * only the Mantis SDK is a shim, so these images show the panel's own output.
  */
 import { chromium } from 'playwright';
+import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -29,6 +30,34 @@ const server = createServer(async (req, res) => {
     } catch { res.writeHead(404).end('not found'); }
 });
 await new Promise(resolve => server.listen(PORT, resolve));
+
+// Own the backend's lifetime here rather than leaving it running between
+// invocations: a detached bridge gets reaped with the shell that started it,
+// and the run then fails on a connection refused that looks like a panel bug.
+const bridge = spawn('python3', [path.join(here, 'bridge.py'), '--port', '8770'],
+                     { stdio: ['ignore', 'pipe', 'pipe'] });
+bridge.stdout.on('data', chunk => process.stdout.write(`  [bridge] ${chunk}`));
+bridge.stderr.on('data', chunk => process.stderr.write(`  [bridge] ${chunk}`));
+const stopBridge = () => { try { bridge.kill('SIGTERM'); } catch { /* already gone */ } };
+process.on('exit', stopBridge);
+
+/** Waits until the backend answers, so a slow import is not read as a failure. */
+async function waitForBridge() {
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+        try {
+            const response = await fetch('http://127.0.0.1:8770/invoke', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'analyze', payload: { molecules: [{ id: 'probe', smiles: 'CCO' }] } }),
+            });
+            if (response.ok) return;
+        } catch { /* not up yet */ }
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    throw new Error('the extension backend never answered on :8770');
+}
+await waitForBridge();
+console.log('backend ready');
 
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH });
 // A Mantis dock is a narrow column; shoot at that width so the layout is the
@@ -63,6 +92,18 @@ await body.evaluate(el => { el.scrollTop = 1100; });
 await page.waitForTimeout(1200);
 await page.screenshot({ path: `${out}/ext_05_charts.png` });
 
+// Shape: topology and curvature of one molecule.
+await page.getByRole('button', { name: 'Shape' }).click();
+await page.waitForTimeout(800);
+await page.getByRole('button', { name: 'Analyse shape' }).click();
+await page.waitForSelector('text=Ring bonds', { timeout: 120000 });
+await page.waitForTimeout(5000);
+await page.screenshot({ path: `${out}/ext_08_shape.png` });
+const shapeBody = page.locator('.nexus-body');
+await shapeBody.evaluate(el => { el.scrollTop = 420; });
+await page.waitForTimeout(2500);
+await page.screenshot({ path: `${out}/ext_09_persistence.png` });
+
 // Next batch: active learning against the measured column.
 await page.getByRole('button', { name: 'Next batch' }).click();
 await page.waitForTimeout(800);
@@ -90,3 +131,4 @@ console.log('selection size:', await page.evaluate(async () => (await window.man
 console.log(problems.length ? `console errors (${problems.length}):\n  ${problems.slice(0, 4).join('\n  ')}` : 'no console errors');
 await browser.close();
 server.close();
+stopBridge();

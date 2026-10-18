@@ -592,6 +592,117 @@ export const RuleDots: React.FC<{
     </div>
 );
 
+export interface PersistenceFeature {
+    dim: number;
+    birth: number;
+    death: number;
+    life: number;
+}
+
+/**
+ * Persistence diagram of a conformer: when each topological feature appears
+ * and when it closes.
+ *
+ * Distance from the diagonal is the whole reading -- a point far above it
+ * survived across a wide range of scales and is a real feature, one hugging it
+ * is noise. A ring shows up as a long-lived H1 point, which is why benzene
+ * gives exactly one and octane none.
+ *
+ * @param features Birth/death pairs by homology dimension.
+ * @param theme Active theme.
+ */
+export const PersistenceDiagram: React.FC<{
+    features: PersistenceFeature[]; height?: number; theme: NexusTheme;
+}> = ({ features, height = 170, theme }) => {
+    const [hover, setHover] = useState<Hover | null>(null);
+    const width = 300;
+    const pad = { l: 26, r: 8, t: 8, b: 20 };
+
+    const max = useMemo(() => {
+        const values = features.flatMap(f => [f.birth, f.death]).filter(Number.isFinite);
+        return values.length ? Math.max(...values) * 1.08 : 1;
+    }, [features]);
+
+    if (features.length === 0) {
+        return (
+            <div>
+                <ChartHead title="Persistence" theme={theme} />
+                <div className="rounded-md px-2 py-3 text-[10px]"
+                    style={{ background: theme.surfaceInset, color: theme.text3 }}>
+                    no finite features
+                </div>
+            </div>
+        );
+    }
+
+    const px = (v: number) => pad.l + (v / max) * (width - pad.l - pad.r);
+    const py = (v: number) => height - pad.b - (v / max) * (height - pad.t - pad.b);
+    // H0 is a merging component, H1 a loop: different marks as well as
+    // different colours, so the two are told apart without relying on hue.
+    const styleFor = (dim: number) => (dim === 1
+        ? { fill: theme.series[0], label: 'H1 · loops' }
+        : { fill: theme.series[2], label: 'H0 · components' });
+    const dims = [...new Set(features.map(f => f.dim))].sort();
+
+    return (
+        <div className="relative">
+            <ChartHead title="Persistence"
+                note={`${features.filter(f => f.dim === 1).length} loops · ${features.length} features`}
+                theme={theme} />
+            <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height}
+                role="img"
+                aria-label={`Persistence diagram with ${features.length} features`}
+                onMouseLeave={() => setHover(null)}>
+                <rect x={pad.l} y={pad.t} width={width - pad.l - pad.r}
+                    height={height - pad.t - pad.b} fill={theme.surfaceInset} rx={8} />
+                {/* Features cannot die before they are born, so nothing lies
+                    below this line; it is the zero-persistence reference. */}
+                <line x1={px(0)} y1={py(0)} x2={px(max)} y2={py(max)}
+                    stroke={theme.lineStrong} strokeWidth={1} strokeDasharray="3 3" />
+                {features.map((f, i) => {
+                    const look = styleFor(f.dim);
+                    const cx = px(f.birth);
+                    const cy = py(f.death);
+                    return f.dim === 1 ? (
+                        <circle key={i} cx={cx} cy={cy} r={4.5} fill={look.fill}
+                            fillOpacity={0.9} stroke={theme.surfaceInset} strokeWidth={1.5}
+                            onMouseEnter={() => setHover({ x: cx, y: cy, lines: [
+                                `H${f.dim} feature`,
+                                `born ${f.birth.toFixed(2)} Å · dies ${f.death.toFixed(2)} Å`,
+                                `persistence ${f.life.toFixed(2)} Å`,
+                            ] })} />
+                    ) : (
+                        <rect key={i} x={cx - 3} y={cy - 3} width={6} height={6}
+                            fill={look.fill} fillOpacity={0.75}
+                            stroke={theme.surfaceInset} strokeWidth={1}
+                            onMouseEnter={() => setHover({ x: cx, y: cy, lines: [
+                                `H${f.dim} feature`,
+                                `born ${f.birth.toFixed(2)} Å · dies ${f.death.toFixed(2)} Å`,
+                                `persistence ${f.life.toFixed(2)} Å`,
+                            ] })} />
+                    );
+                })}
+                <text x={pad.l} y={height - 6} fontSize={9} fill={theme.text3}>birth (Å)</text>
+                <text x={2} y={pad.t + 8} fontSize={9} fill={theme.text3}>
+                    {max.toFixed(1)}
+                </text>
+            </svg>
+            <div className="mt-0.5 flex gap-3">
+                {dims.map(dim => (
+                    <span key={dim} className="flex items-center gap-1 text-[9.5px]"
+                        style={{ color: theme.text3 }}>
+                        <span className="inline-block h-2 w-2"
+                            style={{ background: styleFor(dim).fill,
+                                borderRadius: dim === 1 ? 9999 : 1 }} aria-hidden />
+                        {styleFor(dim).label}
+                    </span>
+                ))}
+            </div>
+            <Tooltip hover={hover} width={width} theme={theme} />
+        </div>
+    );
+};
+
 /**
  * Hook returning a stable callback that formats numbers for display.
  *

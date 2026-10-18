@@ -1,0 +1,36 @@
+import { chromium } from 'playwright';
+import { createServer } from 'node:http';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const here = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(here, '..');
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
+const server = createServer(async (req, res) => {
+    const rel = (req.url || '/').split('?')[0];
+    const file = path.join(root, rel === '/' ? 'harness/index.html' : rel);
+    try { const b = await readFile(file);
+        res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] ?? 'application/octet-stream' }); res.end(b);
+    } catch { res.writeHead(404).end('nf'); }
+});
+await new Promise(r => server.listen(8773, r));
+const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH });
+const page = await browser.newPage({ viewport: { width: 420, height: 1000 }, colorScheme: 'dark' });
+const errs = [];
+page.on('console', m => { if (m.type() === 'error') errs.push(m.text().slice(0, 200)); });
+page.on('pageerror', e => errs.push('pageerror: ' + String(e).slice(0, 300)));
+await page.goto('http://127.0.0.1:8773/', { waitUntil: 'networkidle' });
+await page.waitForTimeout(1500);
+await page.locator('select').first().selectOption('map').catch(() => undefined);
+await page.waitForTimeout(400);
+await page.getByRole('button', { name: 'Shape' }).click();
+await page.waitForTimeout(800);
+console.log('tabs:', await page.locator('.nexus-tabs').innerText());
+console.log('button:', await page.locator('.nexus-run').innerText());
+await page.locator('.nexus-run').click();
+await page.waitForTimeout(12000);
+console.log('root length:', await page.evaluate(() => document.getElementById('root')?.innerHTML.length ?? -1));
+console.log('body present:', await page.locator('.nexus-body').count());
+console.log('errors:\n  ' + errs.slice(0, 4).join('\n  '));
+await page.screenshot({ path: '/home/user/NEXUS-pipeline/paper/screenshots/ext_08_shape.png' });
+await browser.close(); server.close();

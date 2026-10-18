@@ -32,6 +32,13 @@ export interface NexusTheme {
     series: readonly [string, string, string];
     /** Single-hue sequential ramp, dim to bright on dark, light to dark on light. */
     ramp: readonly string[];
+    /**
+     * Diverging scale for signed quantities, as two hues around a neutral
+     * midpoint. Discrete Ricci curvature is the case this exists for: it is
+     * signed, and zero is a meaningful value -- a cycle graph has curvature
+     * exactly zero -- so a sequential ramp would hide the thing worth seeing.
+     */
+    diverging: { low: string; mid: string; high: string };
     /** Accent for interactive chrome. */
     accent: string;
     /** Reserved status colours; never reused as a series. */
@@ -69,6 +76,7 @@ const DARK: NexusTheme = {
     // Single hue, dim to bright on a dark surface, anchored on the azure the
     // workspace accents with.
     ramp: ['#17243a', '#1d3a66', '#245593', '#006aff', '#5b9dff', '#8dbaff', '#cbdfff'],
+    diverging: { low: '#5b9dff', mid: '#6b7280', high: '#f07a9e' },
     accent: '#5b9dff',                              // --workspace-accent
     good: '#3ed68c',                                // --workspace-tone-green
     warn: '#ffb84d',                                // --workspace-tone-amber
@@ -89,6 +97,7 @@ const LIGHT: NexusTheme = {
     grid: 'rgba(23, 23, 23, 0.07)',
     series: ['#006aff', '#d17a00', '#0a9a4e'],
     ramp: ['#dce8ff', '#b6d0ff', '#84b2ff', '#3f8bff', '#006aff', '#0054cc', '#003a8c'],
+    diverging: { low: '#2f6fdb', mid: '#8b8f9a', high: '#d1407a' },
     accent: '#006aff',                              // --mantis-azure
     good: '#0a9a4e',
     warn: '#d17a00',
@@ -131,4 +140,41 @@ export function gradientText(theme: NexusTheme): React.CSSProperties {
         backgroundClip: 'text',
         color: 'transparent',
     };
+}
+
+
+/**
+ * Maps a signed value onto the diverging scale.
+ *
+ * The midpoint is fixed at zero rather than at the data's middle, because for
+ * a signed quantity the sign is the information: a scale centred on the mean
+ * would paint a wholly positive set as if it straddled zero.
+ *
+ * @param value Signed value to colour.
+ * @param magnitude Largest absolute value in the set, used to normalise.
+ * @param theme Active theme.
+ * @returns A CSS colour.
+ */
+export function divergingColor(value: number, magnitude: number,
+                               theme: NexusTheme): string {
+    if (!Number.isFinite(value) || magnitude <= 0) return theme.diverging.mid;
+    const unit = Math.max(-1, Math.min(1, value / magnitude));
+    const to = unit >= 0 ? theme.diverging.high : theme.diverging.low;
+    return mixHex(theme.diverging.mid, to, Math.abs(unit));
+}
+
+/**
+ * Blends two hex colours in sRGB.
+ *
+ * @param from Start colour.
+ * @param to End colour.
+ * @param amount Fraction of `to`, in [0, 1].
+ * @returns The blended hex colour.
+ */
+function mixHex(from: string, to: string, amount: number): string {
+    const parse = (hex: string) => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+    const a = parse(from);
+    const b = parse(to);
+    const mixed = a.map((channel, i) => Math.round(channel + (b[i] - channel) * amount));
+    return `#${mixed.map(v => v.toString(16).padStart(2, '0')).join('')}`;
 }

@@ -13,7 +13,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { rampColor, type NexusTheme } from './theme';
+import { divergingColor, rampColor, type NexusTheme } from './theme';
 
 /** Degrees turned per second when spinning unattended. */
 const SPIN_RATE = 14;
@@ -151,7 +151,10 @@ export interface ConformerBond {
 export const Molecule3D: React.FC<{
     atoms: ConformerAtom[]; bonds: ConformerBond[]; formula: string;
     restraintError?: number; height?: number; theme: NexusTheme;
-}> = ({ atoms, bonds, formula, restraintError, height = 190, theme }) => {
+    /** Per-bond signed values -- discrete curvature -- drawn on the diverging scale. */
+    bondValues?: number[]; bondMagnitude?: number; bondValueLabel?: string;
+}> = ({ atoms, bonds, formula, restraintError, height = 190, theme,
+        bondValues, bondMagnitude, bondValueLabel }) => {
     const { rotation, spinning, setSpinning, onPointerDown, onPointerMove, onPointerUp } =
         useRotation(atoms.length > 0);
     const size = 300;
@@ -227,9 +230,13 @@ export const Molecule3D: React.FC<{
                                     <line key={offset}
                                         x1={x1 + nx * offset} y1={y1 + ny * offset}
                                         x2={x2 + nx * offset} y2={y2 + ny * offset}
-                                        stroke={bond.order === 4 ? theme.accent : theme.text2}
-                                        strokeOpacity={bond.order === 4 ? 0.75 : 0.5}
-                                        strokeWidth={2.2 * (0.6 + 0.4 * mark.depth)}
+                                        stroke={bondValues
+                                            ? divergingColor(bondValues[mark.index] ?? 0,
+                                                bondMagnitude || 1, theme)
+                                            : bond.order === 4 ? theme.accent : theme.text2}
+                                        strokeOpacity={bondValues ? 0.95
+                                            : bond.order === 4 ? 0.75 : 0.5}
+                                        strokeWidth={(bondValues ? 3.4 : 2.2) * (0.6 + 0.4 * mark.depth)}
                                         strokeLinecap="round"
                                         strokeDasharray={bond.order === 4 ? '5 3' : undefined} />
                                 ))}
@@ -264,6 +271,21 @@ export const Molecule3D: React.FC<{
                     {spinning ? 'pause' : 'spin'}
                 </button>
             </div>
+            {bondValues && bondValueLabel && (
+                <div className="mt-1 flex items-center gap-2 text-[9.5px]"
+                    style={{ color: theme.text3 }}>
+                    <span>{bondValueLabel}</span>
+                    <span className="flex items-center gap-1">
+                        <span>−</span>
+                        <span className="inline-block h-2"
+                            style={{ width: 54, borderRadius: 9999,
+                                background: `linear-gradient(90deg, ${theme.diverging.low}, ${theme.diverging.mid}, ${theme.diverging.high})` }}
+                            aria-hidden />
+                        <span>+</span>
+                    </span>
+                    <span>{(bondMagnitude ?? 0).toFixed(2)} max</span>
+                </div>
+            )}
         </div>
     );
 };
