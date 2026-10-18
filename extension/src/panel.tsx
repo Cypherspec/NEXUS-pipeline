@@ -117,6 +117,41 @@ function numericColumns(points: MantisPoint[]): string[] {
         .sort((a, b) => b[1] - a[1]).map(([key]) => key);
 }
 
+
+/**
+ * Keeps one failing view from taking the panel with it.
+ *
+ * A panel is a single bundle in a bare iframe: an exception thrown while
+ * rendering any chart unmounts the whole tree, and what the user sees is an
+ * empty dock with no indication that anything went wrong. That happened during
+ * development -- a missing import blanked the panel -- and it would be
+ * indistinguishable from the panel simply not loading. The boundary reports
+ * what failed and leaves the rest of the panel usable.
+ */
+class ViewBoundary extends React.Component<
+    { label: string; theme: ReturnType<typeof nexusTheme>; children: React.ReactNode },
+    { error: Error | null }
+> {
+    state: { error: Error | null } = { error: null };
+
+    static getDerivedStateFromError(error: Error) {
+        return { error };
+    }
+
+    render() {
+        const { error } = this.state;
+        if (!error) return this.props.children;
+        const { theme, label } = this.props;
+        return (
+            <div className="nexus-error"
+                style={{ background: `${theme.warn}14`, color: theme.warn,
+                    border: `1px solid ${theme.warn}40` }}>
+                <strong>{label}</strong> could not be drawn: {error.message}
+            </div>
+        );
+    }
+}
+
 const NexusExtensionPanel: React.FC = () => {
     // Panels get no theme signal from the host, so dark is the panel's own
     // choice and matches the Mantis workspace it is docked into.
@@ -525,6 +560,7 @@ const NexusExtensionPanel: React.FC = () => {
                         </div>
 
                         {space3d && (
+                            <ViewBoundary label="The depth projection" theme={theme}>
                             <Space3D points={space3d.points}
                                 explained={space3d.explainedVariance}
                                 colourBy={space3d.colourBy}
@@ -539,12 +575,15 @@ const NexusExtensionPanel: React.FC = () => {
                                     window.mantis.selection.set([id], mapId ?? undefined)
                                         .catch(() => undefined);
                                 }} />
+                            </ViewBoundary>
                         )}
 
                         {conformer && (
-                            <Molecule3D atoms={conformer.atoms} bonds={conformer.bonds}
-                                formula={conformer.formula}
-                                restraintError={conformer.restraintError} theme={theme} />
+                            <ViewBoundary label="The conformer view" theme={theme}>
+                                <Molecule3D atoms={conformer.atoms} bonds={conformer.bonds}
+                                    formula={conformer.formula}
+                                    restraintError={conformer.restraintError} theme={theme} />
+                            </ViewBoundary>
                         )}
 
                         <ScatterPlot title="Property space" data={chem.scatter}
@@ -636,6 +675,7 @@ const NexusExtensionPanel: React.FC = () => {
                                 hint="conformer embedding residual" theme={theme} />
                         </div>
 
+                        <ViewBoundary label="The curvature view" theme={theme}>
                         <Molecule3D
                             atoms={shapeResult.atoms.map(a => ({
                                 ...a, radius: 0.72, aromatic: false, hydrogens: 0,
@@ -646,8 +686,11 @@ const NexusExtensionPanel: React.FC = () => {
                             bondMagnitude={shapeResult.curvature.magnitude}
                             bondValueLabel="Ollivier–Ricci curvature"
                             theme={theme} />
+                        </ViewBoundary>
 
-                        <PersistenceDiagram features={shapeResult.features} theme={theme} />
+                        <ViewBoundary label="The persistence diagram" theme={theme}>
+                            <PersistenceDiagram features={shapeResult.features} theme={theme} />
+                        </ViewBoundary>
 
                         <p className="nexus-hint" style={{ color: theme.text3 }}>
                             Persistence is computed on the 3D conformer, curvature on the bond
