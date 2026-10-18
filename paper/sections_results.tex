@@ -62,6 +62,41 @@ interpolation between known drug--target pairs, not the generalisation a screeni
 campaign actually needs, and the gap between \affinityRandomCi{} and
 \affinityColddrugCi{} is the size of that distinction.
 
+\subsection{Shape: topology and curvature}
+\label{sec:shape}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{fig11_shape_signatures}
+\caption{Left: H$_1$ features of three conformers, all far above the diagonal.
+Centre: Ollivier--Ricci curvature per bond; benzene is a single point on zero.
+Right: long-lived H$_1$ features against perceived ring count.}
+\label{fig:shape}
+\end{figure}
+
+The pipeline computes two shape descriptions that no descriptor in
+Section~\ref{sec:molnet} captures, and both are checked against something that
+is true independently of the code.
+
+Persistent homology is computed on the 3D conformer and never sees the bond
+graph. On \shapeProbes{} probe structures it recovers the expected number of
+long-lived H$_1$ features in \shapeProbesMatched{} of \shapeProbes{} cases ---
+benzene one, acyclic octane none, caffeine and naphthalene two. The interesting
+test is the one that is not hand-picked: across \shapeRecoveryN{} molecules
+from ESOL, the count of features surviving more than \shapeLifeThreshold{}\,Å
+correlates with the ring count perceived from connectivity at
+$r = \shapeRecoveryR{}$, and agrees \emph{exactly} on \shapeRecoveryExact{} of
+them (mean absolute error \shapeRecoveryMae{} rings). Geometry alone recovers a
+combinatorial property of the molecular graph.
+
+Ollivier--Ricci curvature is computed on the bond graph with an exact
+transportation simplex. For a cycle graph $C_n$ with $n \geq 6$ the curvature is
+exactly zero, which is a theorem rather than a fit; on \shapeCycles{} ring sizes
+the implementation returns $0.00 \times 10^{0}$ on every bond, in
+\shapeCyclesZero{} of \shapeCycles{} cases. That exactness is what makes the
+quantity readable in the panel: an unstrained ring is flat, and anything that is
+not flat is strain or fusion rather than numerical drift.
+
 \subsection{Calibrated uncertainty}
 \label{sec:conformal}
 

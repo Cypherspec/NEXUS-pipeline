@@ -1,0 +1,90 @@
+{
+  "life_threshold": 0.35,
+  "probes": [
+    {
+      "name": "benzene",
+      "smiles": "c1ccccc1",
+      "expected_loops": 1,
+      "loops": 1,
+      "matches": true,
+      "longest_life": 1.039769176886735,
+      "curvature_min": 0.0,
+      "curvature_max": 0.0
+    },
+    {
+      "name": "octane",
+      "smiles": "CCCCCCCC",
+      "expected_loops": 0,
+      "loops": 0,
+      "matches": true,
+      "longest_life": 0.0,
+      "curvature_min": 0.0,
+      "curvature_max": 0.5
+    },
+    {
+      "name": "caffeine",
+      "smiles": "CN1C=NC2=C1C(=O)N(C(=O)N2C)C",
+      "expected_loops": 2,
+      "loops": 2,
+      "matches": true,
+      "longest_life": 1.0264881765194362,
+      "curvature_min": -0.33333333333333326,
+      "curvature_max": 0.3333333333333335
+    },
+    {
+      "name": "naphthalene",
+      "smiles": "c1ccc2ccccc2c1",
+      "expected_loops": 2,
+      "loops": 2,
+      "matches": true,
+      "longest_life": 1.0426991388026743,
+      "curvature_min": -0.33333333333333326,
+      "curvature_max": 0.0
+    },
+    {
+      "name": "cyclohexane",
+      "smiles": "C1CCCCC1",
+      "expected_loops": 1,
+      "loops": 1,
+      "matches": true,
+      "longest_life": 0.9458397498144895,
+      "curvature_min": 0.0,
+      "curvature_max": 0.0
+    }
+  ],
+  "cycles": [
+    {
+      "n": 6,
+      "max_abs_curvature": 0.0,
+      "is_zero": true
+    },
+    {
+      "n": 7,
+      "max_abs_curvature": 0.0,
+      "is_zero": true
+    },
+    {
+      "n": 8,
+      "max_abs_curvature": 0.0,
+      "is_zero": true
+    },
+    {
+      "n": 10,
+      "max_abs_curvature": 0.0,
+      "is_zero": true
+    },
+    {
+      "n": 12,
+      "max_abs_curvature": 0.0,
+      "is_zero": true
+    }
+  ],
+  "recovery": {
+    "dataset": "esol",
+    "n_molecules": 198,
+    "n_skipped": 2,
+    "pearson_r": 0.9792676589850748,
+    "exact_match_fraction": 0.9494949494949495,
+    "mean_absolute_error": 0.05555555555555555
+  }
+}

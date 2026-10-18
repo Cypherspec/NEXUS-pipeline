@@ -576,11 +576,148 @@ def fig_adaptive_conformal() -> None:
     save(fig, "fig10_adaptive_conformal")
 
 
+def fig_shape_signatures() -> None:
+    """Topology and curvature separate molecules the descriptors do not.
+
+    Three panels, each a check against something known rather than a display:
+    a benzene ring must give exactly one long-lived loop and curvature exactly
+    zero, an acyclic chain neither; and across a real dataset the loop count
+    should track the ring count without being a restatement of it.
+    """
+    import numpy as _np
+
+    from nexus.chem.conformer import embed_molecule
+    from nexus.chem.descriptors import num_rings
+    from nexus.chem.smiles import parse_smiles
+    from nexus.data import load_dataset
+    from nexus.topo.homology import rips_persistence
+    from nexus.topo.ricci import ollivier_ricci_curvature
+
+    probes = [("benzene", "c1ccccc1"), ("octane", "CCCCCCCC"),
+              ("caffeine", "CN1C=NC2=C1C(=O)N(C(=O)N2C)C"),
+              ("morphine", "CN1CCC23C4C1CC5=C2C(=C(C=C5)O)OC3C(C=C4)O")]
+
+    fig, axes = plt.subplots(1, 3, figsize=(7.8, 2.7))
+
+    # Panel 1: persistence diagrams of the probes.
+    ax = axes[0]
+    for i, (name, smiles) in enumerate(probes[:3]):
+        mol = parse_smiles(smiles)
+        xyz, _ = embed_molecule(mol, seed=0)
+        diagram = rips_persistence(_np.asarray(xyz), max_dim=1)
+        pairs = _np.asarray(diagram.points.get(1, []), dtype=float).reshape(-1, 2)
+        finite = pairs[_np.isfinite(pairs[:, 1])]
+        if len(finite):
+            ax.scatter(finite[:, 0], finite[:, 1], s=34, color=SERIES[i],
+                       edgecolor=SURFACE, linewidth=0.6, label=f"{name} ({len(finite)})",
+                       zorder=3)
+        else:
+            ax.scatter([], [], s=34, color=SERIES[i], label=f"{name} (0)")
+    lo, hi = ax.get_xlim()[0], max(ax.get_ylim()[1], 3.0)
+    ax.plot([0, hi], [0, hi], color=MUTED, linewidth=1, linestyle="--", zorder=1)
+    ax.set_xlabel("birth (Å)")
+    ax.set_ylabel("death (Å)")
+    ax.set_title("H$_1$ features", loc="left")
+    ax.legend(fontsize=6.5, loc="lower right")
+
+    # Panel 2: curvature distribution per probe.
+    ax = axes[1]
+    for i, (name, smiles) in enumerate(probes):
+        mol = parse_smiles(smiles)
+        values = list(ollivier_ricci_curvature(mol).values())
+        ax.scatter([i] * len(values), values, s=22, color=SERIES[i % len(SERIES)],
+                   alpha=0.75, edgecolor=SURFACE, linewidth=0.5)
+    ax.axhline(0.0, color=MUTED, linewidth=1, linestyle="--")
+    ax.set_xticks(range(len(probes)))
+    ax.set_xticklabels([name for name, _ in probes], rotation=20, ha="right")
+    ax.set_ylabel("Ollivier–Ricci curvature")
+    ax.set_title("Zero on a cycle", loc="left")
+    ax.grid(axis="x", visible=False)
+
+    # Panel 3: loops against ring count over a real dataset.
+    ax = axes[2]
+    dataset, _, _, _ = load_dataset("esol")
+    loops, rings = [], []
+    for mol in dataset[:120]:
+        if mol.n_atoms < 3 or mol.n_atoms > 40:
+            continue
+        try:
+            xyz, _ = embed_molecule(mol, seed=0)
+            diagram = rips_persistence(_np.asarray(xyz), max_dim=1)
+            pairs = _np.asarray(diagram.points.get(1, []), dtype=float).reshape(-1, 2)
+            finite = pairs[_np.isfinite(pairs[:, 1])]
+            # Count only features that survive a meaningful range of scales;
+            # short-lived pairs are embedding noise, not rings.
+            loops.append(int((finite[:, 1] - finite[:, 0] > 0.35).sum()))
+            rings.append(num_rings(mol))
+        except Exception:                                    # noqa: BLE001
+            continue
+    jitter = np.random.default_rng(0).normal(0, 0.06, size=len(rings))
+    ax.scatter(np.array(rings) + jitter, loops, s=16, color=BLUE, alpha=0.55,
+               edgecolor="none")
+    if rings:
+        r = float(np.corrcoef(rings, loops)[0, 1])
+        ax.text(0.04, 0.92, f"r = {r:.2f}  (n = {len(rings)})", transform=ax.transAxes,
+                fontsize=7, color=INK2)
+    ax.set_xlabel("rings (perceived)")
+    ax.set_ylabel("long-lived H$_1$ features")
+    ax.set_title("Loops track rings", loc="left")
+
+    fig.tight_layout()
+    save(fig, "fig11_shape_signatures")
+
+
+def fig_conformal_width_distribution() -> None:
+    """What adaptive widths actually do to the distribution of interval widths.
+
+    The summary table reports a mean; this shows the spread behind it. A
+    constant-width score is a spike, which is the point: it cannot tell a
+    confident prediction from a guess.
+    """
+    data = load("conformal_adaptive.json")
+    if not data:
+        raise FileNotFoundError("results/conformal_adaptive.json")
+
+    names = list(data["datasets"].keys())
+    fig, axes = plt.subplots(1, len(names), figsize=(2.6 * len(names), 2.5), sharey=False)
+    if len(names) == 1:
+        axes = [axes]
+    pretty = {"standard": ("constant width", "#a9a8a1"),
+              "gp_sigma": ("scaled by GP sd", BLUE),
+              "residual_fitted": ("fitted residual model", ORANGE)}
+
+    for ax, name in zip(axes, names):
+        variants = data["datasets"][name]
+        for key, (label, colour) in pretty.items():
+            entry = variants.get(key)
+            if not entry:
+                continue
+            mean = entry["mean_width"]
+            spread = entry["width_spread"]
+            # Each score is drawn as its mean with a +/- 1 sd bar; a constant
+            # width has no spread and collapses to a point, which is the
+            # distinction worth seeing.
+            ax.errorbar([label], [mean], yerr=[spread], fmt="o", markersize=6,
+                        color=colour, ecolor=colour, elinewidth=2, capsize=4)
+        ax.set_title(name, loc="left")
+        ax.set_ylabel("interval width" if name == names[0] else "")
+        ax.tick_params(axis="x", labelrotation=24)
+        ax.grid(axis="x", visible=False)
+        for label in ax.get_xticklabels():
+            label.set_ha("right")
+            label.set_fontsize(7)
+
+    fig.suptitle("Interval width, mean ± 1 sd", x=0.01, ha="left", fontsize=9.5)
+    fig.tight_layout()
+    save(fig, "fig12_interval_width_spread")
+
+
 def main() -> None:
     print("rendering figures from results/ ...")
     for fn in (fig_molnet, fig_active_learning, fig_conformal, fig_free_energy,
                fig_descriptors, fig_topology, fig_ricci, fig_gene_ontology,
-               fig_scaffold_split, fig_adaptive_conformal):
+               fig_scaffold_split, fig_adaptive_conformal,
+               fig_shape_signatures, fig_conformal_width_distribution):
         try:
             fn()
         except Exception as exc:                      # noqa: BLE001

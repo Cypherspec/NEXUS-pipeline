@@ -196,6 +196,22 @@ def main() -> None:
                   macro("goFpMeanTerms", num(fp.get("mean_significant_terms"), 2)),
                   macro("goFpAnyHit", pct(fp.get("fraction_trials_with_any_hit")))]
 
+    # --- Shape: topology and curvature
+    shape = load("shape_validation.json")
+    if shape:
+        probes = shape.get("probes", [])
+        lines += [macro("shapeProbes", dig(len(probes))),
+                  macro("shapeProbesMatched", dig(sum(1 for p in probes if p["matches"])))]
+        cycles = shape.get("cycles", [])
+        lines += [macro("shapeCycles", dig(len(cycles))),
+                  macro("shapeCyclesZero", dig(sum(1 for c in cycles if c["is_zero"])))]
+        recovery = shape.get("recovery", {})
+        lines += [macro("shapeRecoveryN", dig(recovery.get("n_molecules"))),
+                  macro("shapeRecoveryR", num(recovery.get("pearson_r"), 3)),
+                  macro("shapeRecoveryExact", pct(recovery.get("exact_match_fraction"))),
+                  macro("shapeRecoveryMae", num(recovery.get("mean_absolute_error"), 3)),
+                  macro("shapeLifeThreshold", num(shape.get("life_threshold"), 2))]
+
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text("\n".join(lines) + "\n")
     missing = sum(1 for line in lines if MISSING in line)
