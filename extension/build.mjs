@@ -49,6 +49,7 @@ await build({
     logLevel: 'warning',
 });
 
+cpSync(path.join(here, 'src', 'utilities.css'), path.join(dist, 'utilities.css'));
 cpSync(path.join(here, 'src', 'panel.css'), path.join(dist, 'panel.css'));
 cpSync(path.join(here, 'src', 'host.js'), path.join(dist, 'extension.js'));
 
@@ -59,7 +60,25 @@ cpSync(path.join(repo, 'nexus'), backendPackage, {
     filter: (src) => !src.includes('__pycache__') && !src.endsWith('.pyc'),
 });
 
-// 3. Check the limits Mantis enforces, then zip.
+// 3. Drop anything Python left behind. Running the backend -- in the harness,
+// or a stray import -- writes __pycache__ next to the source, and a .pyc is
+// not UTF-8 text, so the package would be refused for a file the build itself
+// caused.
+function clean(dir) {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        if (entry.isSymbolicLink()) continue;
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+            if (entry.name === '__pycache__') rmSync(full, { recursive: true, force: true });
+            else clean(full);
+        } else if (full.endsWith('.pyc')) {
+            rmSync(full, { force: true });
+        }
+    }
+}
+clean(path.join(here, 'backend'));
+
+// 4. Check the limits Mantis enforces, then zip.
 const decoder = new TextDecoder('utf-8', { fatal: true });
 let total = 0;
 const offenders = [];

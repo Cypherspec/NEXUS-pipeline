@@ -20,6 +20,9 @@ import {
     CoverageBar, Histogram, IntervalStrip, RankedBars, RuleDots, ScatterPlot,
     StatTile, useNumberFormat, type ScatterDatum,
 } from '../../mantis/src/app/components/panels/nexus/charts';
+import {
+    Molecule3D, Space3D, type ConformerAtom, type ConformerBond, type SpacePoint,
+} from '../../mantis/src/app/components/panels/nexus/three';
 import { gradientText, nexusTheme } from '../../mantis/src/app/components/panels/nexus/theme';
 
 /** Metadata keys searched, in order, for a structure string. */
@@ -124,6 +127,13 @@ const NexusExtensionPanel: React.FC = () => {
     const [linkNeighbours, setLinkNeighbours] = useState(true);
     const [colourBy, setColourBy] = useState('drug_likeness');
     const [note, setNote] = useState<string | null>(null);
+    const [conformer, setConformer] = useState<{
+        atoms: ConformerAtom[]; bonds: ConformerBond[]; formula: string;
+        restraintError: number;
+    } | null>(null);
+    const [space3d, setSpace3d] = useState<{
+        points: SpacePoint[]; explainedVariance: number[]; colourBy: string;
+    } | null>(null);
 
     const disposables = useRef<any[]>([]);
     const ownedBag = useRef<string | null>(null);
@@ -256,7 +266,17 @@ const NexusExtensionPanel: React.FC = () => {
         setNote(null);
         try {
             if (mode === 'analyze') {
-                setAnalysis(await window.mantis.backend.invoke('analyze', { molecules }));
+                const result = await window.mantis.backend.invoke('analyze', { molecules });
+                setAnalysis(result);
+                // The depth projection and a conformer are extra reads, not the
+                // answer, so a failure in either leaves the analysis standing.
+                window.mantis.backend.invoke('space3d', { molecules, colourBy })
+                    .then(setSpace3d).catch(() => setSpace3d(null));
+                const first = result?.molecules?.[0]?.smiles ?? molecules[0]?.smiles;
+                if (first) {
+                    window.mantis.backend.invoke('conformer', { smiles: first })
+                        .then(setConformer).catch(() => setConformer(null));
+                }
             } else if (mode === 'screen') {
                 const result: ScreenResult = await window.mantis.backend.invoke('screen', {
                     molecules, measured, batchSize, strategy: 'ei',
@@ -429,7 +449,7 @@ const NexusExtensionPanel: React.FC = () => {
                 )}
 
                 {mode === 'analyze' && analysis && chem && (
-                    <div className="nexus-stack">
+                    <div className="nexus-stack nexus-enter">
                         <div className="nexus-tiles">
                             <StatTile label="Molecules" value={String(analysis.nAnalyzed)}
                                 hint={analysis.nDropped > 0
@@ -458,6 +478,29 @@ const NexusExtensionPanel: React.FC = () => {
                                   'fraction_csp3'].map(k => <option key={k} value={k}>{k}</option>)}
                             </select>
                         </div>
+
+                        {space3d && (
+                            <Space3D points={space3d.points}
+                                explained={space3d.explainedVariance}
+                                colourBy={space3d.colourBy}
+                                theme={theme}
+                                onPick={id => {
+                                    const picked = analysis.molecules.find(m => m.id === id);
+                                    if (picked) {
+                                        window.mantis.backend.invoke('conformer',
+                                            { smiles: picked.smiles })
+                                            .then(setConformer).catch(() => undefined);
+                                    }
+                                    window.mantis.selection.set([id], mapId ?? undefined)
+                                        .catch(() => undefined);
+                                }} />
+                        )}
+
+                        {conformer && (
+                            <Molecule3D atoms={conformer.atoms} bonds={conformer.bonds}
+                                formula={conformer.formula}
+                                restraintError={conformer.restraintError} theme={theme} />
+                        )}
 
                         <ScatterPlot title="Property space" data={chem.scatter}
                             xLabel="MW" yLabel="logP" colourLabel={colourBy} theme={theme} />
@@ -488,7 +531,7 @@ const NexusExtensionPanel: React.FC = () => {
                 )}
 
                 {mode === 'screen' && batch && (
-                    <div className="nexus-stack">
+                    <div className="nexus-stack nexus-enter">
                         <div className="nexus-tiles">
                             <StatTile label="Proposed" value={String(batch.batch.length)}
                                 hint="now selected on the map" theme={theme} />
@@ -505,7 +548,7 @@ const NexusExtensionPanel: React.FC = () => {
                 )}
 
                 {mode === 'predict' && prediction && (
-                    <div className="nexus-stack">
+                    <div className="nexus-stack nexus-enter">
                         <div className="nexus-tiles">
                             <StatTile label="Trained on" value={String(prediction.nLabelled)}
                                 unit="labelled" theme={theme} />
@@ -531,7 +574,7 @@ const NexusExtensionPanel: React.FC = () => {
                 )}
 
                 {phase === 'idle' && !analysis && !batch && !prediction && (
-                    <div className="nexus-stack">
+                    <div className="nexus-stack nexus-enter">
                         <p style={{ color: theme.text2, fontSize: 11, lineHeight: 1.6 }}>
                             NEXUS reads the molecules behind the points on this map. Results go back
                             onto the map itself: a scaffold family becomes a highlighted bag, a

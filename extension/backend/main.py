@@ -243,11 +243,100 @@ def predict(payload: dict, ctx: dict) -> dict:
     }
 
 
+def conformer(payload: dict, ctx: dict) -> dict:
+    """A 3D conformer for one molecule, for the rotating structure view.
+
+    The geometry is distance-geometry embedding followed by relaxation under an
+    explicit out-of-plane term -- the same code the paper validates on benzene,
+    where distance restraints alone leave the ring puckered. Coordinates are
+    centred and scaled here so the panel can draw them without knowing the
+    chemistry.
+    """
+    from nexus.chem.conformer import embed_molecule
+    from nexus.chem.periodic import covalent_radius
+    from nexus.chem.smiles import parse_smiles
+
+    text = payload.get("smiles")
+    if not isinstance(text, str) or not text.strip():
+        raise PayloadError("'smiles' must be a non-empty string")
+    try:
+        mol = parse_smiles(text.strip())
+    except Exception as exc:                                   # noqa: BLE001
+        raise PayloadError(f"could not parse that structure: {exc}") from exc
+    if mol.n_atoms > 120:
+        raise PayloadError("structure is too large for the 3D view")
+
+    xyz, restraint_error = embed_molecule(mol, seed=int(payload.get("seed", 0)))
+    xyz = np.asarray(xyz, dtype=float)
+    xyz -= xyz.mean(axis=0, keepdims=True)
+    extent = float(np.abs(xyz).max()) or 1.0
+    xyz = xyz / extent                                          # unit box
+
+    atoms = [{"symbol": atom.symbol,
+              "radius": float(covalent_radius(atom.symbol) or 0.7),
+              "aromatic": bool(atom.aromatic),
+              "hydrogens": int(atom.total_h),
+              "x": float(xyz[i, 0]), "y": float(xyz[i, 1]), "z": float(xyz[i, 2])}
+             for i, atom in enumerate(mol.atoms)]
+    bonds = [{"a": int(b.a), "b": int(b.b), "order": int(b.order),
+              "inRing": bool(b.in_ring)} for b in mol.bonds]
+    return {
+        "smiles": text.strip(), "formula": mol.formula(),
+        "atoms": atoms, "bonds": bonds,
+        "restraintError": float(restraint_error),
+        "extentAngstrom": extent,
+    }
+
+
+def space3d(payload: dict, ctx: dict) -> dict:
+    """Three-component projection of the selection's chemical space.
+
+    The map itself is two-dimensional; this returns the third component so the
+    panel can rotate the same molecules in depth. Components come from an SVD
+    of the centred fingerprint matrix, which is the same construction the
+    seeded space's own layout uses, carried one axis further.
+    """
+    from nexus.chem.fingerprint import fingerprint_matrix
+
+    mols, smiles, ids, dropped = _structures(payload, MAX_PREDICT)
+    if len(mols) < 4:
+        raise PayloadError("at least four molecules are needed to project a space")
+
+    X = fingerprint_matrix(mols, kind="morgan", n_bits=1024).astype(np.float64)
+    X = X - X.mean(axis=0, keepdims=True)
+    _, singular, vt = np.linalg.svd(X, full_matrices=False)
+    coords = X @ vt[:3].T
+    scale = float(np.abs(coords).max()) or 1.0
+    coords = coords / scale
+
+    variance = (singular ** 2)
+    explained = (variance[:3] / variance.sum()).tolist() if variance.sum() else [0.0, 0.0, 0.0]
+
+    colour_key = str(payload.get("colourBy", "drug_likeness"))
+    values = []
+    if colour_key:
+        from nexus.chem.descriptors import compute_descriptors
+        for mol in mols:
+            descriptors = compute_descriptors(mol)
+            value = descriptors.get(colour_key)
+            values.append(None if value is None else float(value))
+
+    points = [{"id": ids[i], "smiles": smiles[i],
+               "x": float(coords[i, 0]), "y": float(coords[i, 1]),
+               "z": float(coords[i, 2]),
+               "value": values[i] if i < len(values) else None}
+              for i in range(len(ids))]
+    return {"points": points, "explainedVariance": explained,
+            "colourBy": colour_key, "nDropped": dropped}
+
+
 _ACTIONS = {
     "analyze": analyze,
     "neighbors": neighbors,
     "screen": screen,
     "predict": predict,
+    "conformer": conformer,
+    "space3d": space3d,
 }
 
 

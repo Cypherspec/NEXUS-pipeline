@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NEXUS extension panel harness</title>
+  <style>
+    /* The host's own frame styles, copied from ExtensionPanelHost so the panel
+       sees the same baseline it will see once installed. */
+    html, body, #root { height: 100%; margin: 0; }
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  </style>
+  <link rel="stylesheet" href="/dist/utilities.css" />
+  <link rel="stylesheet" href="/dist/panel.css" />
+</head>
+<body>
+  <div id="root"></div>
+  <script src="/harness/points.js"></script>
+  <script src="/harness/mantisShim.js"></script>
+  <script src="/dist/panel.js"></script>
+</body>
+</html>

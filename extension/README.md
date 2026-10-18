@@ -91,3 +91,21 @@ NEXTAUTH_SECRET=<same as API TOKEN_SECRET> NEXT_PUBLIC_BACKEND_URL=http://localh
 of Morgan fingerprints computed by this package rather than by a text embedding
 service — the normal ingestion path needs vLLM or an OpenAI key, and neither is
 what a chemical map wants anyway.
+
+## Harness
+
+`harness/` drives the built panel outside Mantis so it can be exercised and
+screenshotted: `bridge.py` serves the real `backend/main.py` over HTTP, and
+`mantisShim.js` implements only the SDK surface the panel calls. The bundle,
+the stylesheets and the Python are the installed ones; nothing in `harness/`
+ships inside the package.
+
+```bash
+python harness/bridge.py --port 8770      # the real backend, over HTTP
+node harness/shoot.mjs                    # drive the panel, write screenshots
+```
+
+It earns its place: the first run through it caught that the panel's chart
+components use Tailwind utility classes, which the host supplies in-tree but an
+extension iframe does not, so the installed panel was laying out with inert
+classes. `src/utilities.css` now ships the enumerated set those components use.
