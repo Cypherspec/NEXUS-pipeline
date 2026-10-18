@@ -6,9 +6,17 @@
 
 * { box-sizing: border-box; }
 
-html, body, #root {
+html, body {
     height: 100%;
     margin: 0;
+}
+
+/* The host mounts the panel into its own container, not necessarily #root, so
+ * the root cannot inherit a percentage height through it: a chain of
+ * height:100% resolves against an auto-height parent and collapses to zero.
+ * Size against the viewport instead, which is the iframe itself. */
+#root {
+    min-height: 100vh;
 }
 
 body {
@@ -19,7 +27,7 @@ body {
 .nexus-root {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    height: 100vh;
     overflow: hidden;
 }
 

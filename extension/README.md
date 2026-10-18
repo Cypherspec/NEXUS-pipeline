@@ -63,3 +63,31 @@ no binary, so a stray `.pyc` fails the build rather than the import), and writes
 
 Nothing is declared that the code does not call, which is the rule the install
 validator reads the other way round.
+
+## Running the whole stack locally
+
+Both Mantis repositories are used read-only; nothing in either is modified.
+
+```bash
+# Postgres needs pgvector >= 0.7 (halfvec). Ubuntu ships 0.6, so build 0.8:
+#   git clone --branch v0.8.0 https://github.com/pgvector/pgvector && make && make install
+pg_ctlcluster 16 main start
+redis-server --daemonize yes --dir /tmp
+createdb -O mantis mantis_dev && psql -d mantis_dev -c 'CREATE EXTENSION vector'
+
+# MantisAPI, in a venv kept outside the repo
+uv venv --python 3.11 ~/mantis-venv
+VIRTUAL_ENV=~/mantis-venv uv pip sync --index-strategy unsafe-best-match src/requirements-cpu.txt
+DATABASE_URL=postgresql://mantis:mantis@localhost:5432/mantis_dev DJANGO_LOCAL=True \
+  ~/mantis-venv/bin/python manage.py migrate && ... manage.py runserver 0.0.0.0:8000
+
+# Frontend. NEXTAUTH_SECRET must equal the API's TOKEN_SECRET, and the backend
+# URL must share a host with the frontend: the NextAuth cookie is set on
+# `localhost`, and a browser will not send it to `127.0.0.1`.
+NEXTAUTH_SECRET=<same as API TOKEN_SECRET> NEXT_PUBLIC_BACKEND_URL=http://localhost:8000 yarn dev
+```
+
+`seed_mantis_space.py` then creates a space from the ESOL set, laid out by a PCA
+of Morgan fingerprints computed by this package rather than by a text embedding
+service — the normal ingestion path needs vLLM or an OpenAI key, and neither is
+what a chemical map wants anyway.
