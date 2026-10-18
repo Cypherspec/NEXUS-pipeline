@@ -16,7 +16,7 @@
 \large Non-Equilibrium eXploration with Unified Synthesis\\[0.2em]
 \normalsize A dependency-free drug discovery pipeline, with measured results}
 \author{Nischay Kommisetty}
-\date{2026-10-17}
+\date{2026-10-18}
 
 \begin{document}
 \maketitle
@@ -38,13 +38,13 @@ the measured ones. Results that did not help are reported alongside those that d
 \vspace{0.5em}
 \begin{tabular}{lr}
 \toprule
-Python in the package & 7,119 lines \\
-Tests & 1,823 lines \\
-Benchmarks and validation & 2,156 lines \\
-Mantis panel (TypeScript) & 804 lines \\
+Python in the package & 7,194 lines \\
+Tests & 2,159 lines \\
+Benchmarks and validation & 3,204 lines \\
+Mantis panel (TypeScript) & 2,276 lines \\
 \midrule
-Total Python & 11,098 lines \\
-Test suite & 268 tests, all passing \\
+Total Python & 12,557 lines \\
+Test suite & 294 tests, all passing \\
 \bottomrule
 \end{tabular}
 
@@ -98,8 +98,29 @@ the four Mantis store modules that supply the selected points.
 
 \begin{figure}[htbp]
 \centering
-\fbox{\includegraphics[width=0.96\linewidth]{screenshots/06_dark_mode.png}}
-\caption{Dark mode, which Mantis panels are expected to support.}
+\fbox{\includegraphics[width=0.96\linewidth]{screenshots/03b_property_space.png}}
+\caption{The charts below the fold. Property space is logP against molecular weight, every point shaded by the descriptor driving the map colouring; the histogram beneath it is the logP distribution with its mean marked.}
+\end{figure}
+
+
+\begin{figure}[htbp]
+\centering
+\fbox{\includegraphics[width=0.96\linewidth]{screenshots/03c_distributions.png}}
+\caption{Scaffold families ranked by size, over the per-molecule table. The acyclic group dominating this selection is the same structure that broke the validation split, visible here directly.}
+\end{figure}
+
+
+\begin{figure}[htbp]
+\centering
+\fbox{\includegraphics[width=0.96\linewidth]{screenshots/05b_interval_strip.png}}
+\caption{Every prediction with its interval, sorted by predicted value. With the default constant-width score each interval is the same length --- which is what prompted the adaptive-width work in the previous section.}
+\end{figure}
+
+
+\begin{figure}[htbp]
+\centering
+\fbox{\includegraphics[width=0.96\linewidth]{screenshots/06_light_mode.png}}
+\caption{Light mode. Both themes are selected palettes validated against their own surface, not one inverted into the other.}
 \end{figure}
 
 
@@ -115,6 +136,9 @@ dataset & $n$ & metric & NEXUS D-MPNN & published$^1$ & best & best method \\
 bace & 1513 & roc\_auc & 0.853 $\pm$ 0.015 & 0.857 & 0.906 & ECFP+descriptors + RF \\
 bbbp & 2050 & roc\_auc & 0.911 $\pm$ 0.006 & 0.913 & 0.934 & ECFP + RF \\
 clintox & 1484 & roc\_auc & 0.896 $\pm$ 0.041 & 0.897 & 0.897 & D-MPNN + descriptors \\
+esol & 1128 & rmse & 0.965 $\pm$ 0.123 & 0.980 & 0.818 & D-MPNN + descriptors \\
+freesolv & 642 & rmse & 2.143 $\pm$ 0.140 & 2.180 & 1.968 & ECFP+descriptors + linear \\
+lipo & 4200 & rmse & 0.603 $\pm$ 0.052 & 0.655 & 0.603 & D-MPNN \\
 \bottomrule
 \end{tabular}
 
@@ -172,7 +196,21 @@ The Davis kinase panel: 68 inhibitors against 442 kinases. Three splits are repo
 because they answer different questions --- random tests interpolation, cold-drug is the
 lead-discovery case, cold-target the selectivity case.
 
-\emph{Davis binding-affinity benchmark still running.}
+\begin{tabular}{llrrr}
+\toprule
+split & model & RMSE & Pearson & concordance index \\
+\midrule
+random & mean & 0.908 & nan & 0.500 \\
+random & ridge & 0.769 & 0.533 & 0.776 \\
+random & random forest & 0.601 & 0.750 & 0.853 \\
+cold-drug & mean & 0.918 & -0.000 & 0.500 \\
+cold-drug & ridge & 0.878 & 0.330 & 0.687 \\
+cold-drug & random forest & 0.887 & 0.388 & 0.679 \\
+cold-target & mean & 0.940 & nan & 0.500 \\
+cold-target & ridge & 0.799 & 0.527 & 0.774 \\
+cold-target & random forest & 0.681 & 0.689 & 0.820 \\
+\bottomrule
+\end{tabular}
 
 
 \section{Uncertainty that means something}
@@ -278,6 +316,51 @@ glycolytic process & 1 & glycolytic process \\
 \end{figure}
 
 
+\section{Calibrated uncertainty, and whether width should adapt}
+
+Split conformal with an absolute-residual score guarantees marginal coverage, but gives
+every molecule an interval of the same length. That is visible in the panel screenshot
+further up: a vertical stack of identical bars. It is valid and it is useless for triage,
+because it cannot say which predictions to trust. Scaling the score by a per-molecule
+difficulty estimate keeps the same guarantee and lets width vary.
+
+\begin{tabular}{llrrrrr}
+\toprule
+dataset & score & coverage & width & width sd & worst quintile & spread \\
+\midrule
+esol & constant width & 0.871 & 4.86 & 0.00 & 0.813 & 0.111 \\
+ & scaled by GP sd & 0.864 & 4.98 & 0.76 & 0.783 & 0.169 \\
+ & fitted residual model & 0.884 & 6.30 & 2.31 & 0.665 & 0.321 \\
+\addlinespace
+freesolv & constant width & 0.995 & 11.13 & 0.00 & 0.980 & 0.020 \\
+ & scaled by GP sd & 0.992 & 10.77 & 0.50 & 0.980 & 0.020 \\
+ & fitted residual model & 0.954 & 12.15 & 3.31 & 0.781 & 0.219 \\
+\addlinespace
+lipo & constant width & 0.898 & 2.65 & 0.00 & 0.799 & 0.176 \\
+ & scaled by GP sd & 0.895 & 2.53 & 0.57 & 0.864 & 0.061 \\
+ & fitted residual model & 0.889 & 3.35 & 1.82 & 0.704 & 0.294 \\
+\addlinespace
+\bottomrule
+\end{tabular}
+
+
+\noindent Marginal coverage holds for every score, as the theory says it must --- that is
+the check, and it passes. The interesting column is the last one: how far conditional
+coverage drifts across difficulty quintiles. Constant-width intervals over-cover easy
+molecules and under-cover hard ones, which is precisely the failure adaptivity should
+repair, and on Lipo scaling by the GP posterior sd cuts that drift from 0.176 to 0.061
+while also narrowing the mean interval. On ESOL it makes it worse. Fitting a separate
+model to the residuals --- the textbook construction --- is worse than both on every
+dataset. So the adaptive score is offered as an option and left off by default, and the
+fitted-residual variant is reported as a negative result rather than shipped.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{figures/fig10_adaptive_conformal.pdf}
+\caption{Left: mean interval width, labelled with the marginal coverage each score actually achieved. Right: coverage inside difficulty quintiles, averaged over datasets. Flat at the nominal level is the ideal; the constant-width score slopes down, and the fitted residual model swings from 0.72 to 1.00.}
+\end{figure}
+
+
 \section{Why scaffold splitting matters}
 
 \begin{figure}[htbp]
@@ -287,24 +370,64 @@ glycolytic process & 1 & glycolytic process \\
 \end{figure}
 
 
+\textbf{A bug this benchmark was hiding.} The balanced splitter could hand the
+validation set \emph{nothing}. FreeSolv is the case: its acyclic scaffold group is 320
+of 642 molecules, so it overflows the training quota, overflows the validation quota, and
+lands in test --- after which every remaining group still fits in training and validation
+is never reached. The split came out 0.50 / 0.00 / 0.50 rather than 0.60 / 0.20 / 0.20,
+which silently disabled early stopping and left half the dataset in test. Oversized groups
+are now assigned largest-first, so the one group too big for any held-out subset inflates
+training rather than test, and a rebalancing pass moves whole groups --- never splitting a
+scaffold --- into an undersized validation set. FreeSolv now splits 0.56 / 0.20 / 0.24.
+Results computed before this fix are not comparable with results after it, so the
+MoleculeNet table above was regenerated.
+
 \section{De novo generation}
 
-\begin{tabular}{lrrr}
+\begin{tabular}{lrrrrr}
 \toprule
-sampler & validity & uniqueness & novelty \\
+sampler & valid & valid (largest frag.) & mean degree & unique & novel \\
 \midrule
-model + valence constraint & 0.0\% & 0.0\% & 0.0\% \\
-model, unconstrained sampling & 0.0\% & 0.0\% & 0.0\% \\
-marginal baseline (no model) & 2.0\% & 100.0\% & 100.0\% \\
+model + valence constraint & 64.7\% & 100.0\% & 2.36 & 100.0\% & 99.5\% \\
+model, unconstrained sampling & 2.0\% & 6.0\% & 4.65 & 100.0\% & 100.0\% \\
+marginal baseline (no model) & 2.0\% & 43.0\% & 1.88 & 100.0\% & 100.0\% \\
 \bottomrule
 \end{tabular}
 
 
-\textbf{A negative result, reported.} The first generator reached only 3.0\% validity,
-\emph{below} its own 4.0\% marginal baseline: sampled bond matrices were far too dense,
-so valences blew up. Valence-constrained sampling and an eight-fold larger training set
-were added in response. The table above shows what that actually bought, including the
-ablation with the constraint switched off.
+\noindent\footnotesize Training-set mean degree is 1.99; a generator that collapses to the empty graph shows up here long before the validity column explains why.
+
+
+\textbf{Two bugs, found by a number that was impossible.} The generator first scored
+0.0\% validity --- \emph{below} its own untrained marginal baseline. A trained model
+losing to its own control is not a weak result, it is a broken one, so it was traced
+rather than reported. Sampled graphs had mean degree 0.26 against a training-set mean of
+1.99: "no bond" is 83.7\% of atom pairs, so under an unweighted cross entropy the
+denoiser had learned to predict "none" everywhere. Separately, the valence-constrained
+sampler began reverse diffusion from the all-zero bond matrix instead of the marginal
+noise prior, and because the posterior's likelihood term anchors $x_{t-1}$ to $x_t$,
+starting empty dragged the whole trajectory back. With a class-balanced bond loss and the
+prior-initialised sampler, mean generated degree rises monotonically with the balancing
+exponent and validity follows it off the floor.
+
+\textbf{What is still wrong.} The table below is the honest account of where the
+remaining samples die. Valence errors are now rare --- the constraint handles them --- and
+almost every rejection is a graph in two or more pieces. The model has no connectivity
+prior, and nothing in the training objective supplies one.
+
+\begin{tabular}{lrr}
+\toprule
+rejected because & count & share \\
+\midrule
+disconnected & 106 & 35.3\% \\
+\bottomrule
+\end{tabular}
+
+
+\noindent\footnotesize The generation hyperparameters were selected on this same
+validity metric, with no held-out set. That is the usual practice in the generative
+chemistry literature, and it is still a reason to read the number as an upper bound.
+\normalsize
 
 \section{Integration with Mantis}
 

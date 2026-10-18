@@ -160,5 +160,167 @@
       "chemprop_dmpnn": 0.897,
       "source": "Yang et al. 2019 (scaffold)"
     }
+  },
+  "esol": {
+    "metric": "rmse",
+    "n_seeds": 3,
+    "n_total": 1128,
+    "n_tasks": 1,
+    "scaffold_leakage": 0.0,
+    "methods": {
+      "D-MPNN + descriptors": {
+        "mean": 0.8182105858360263,
+        "std": 0.07305298258063396,
+        "n_seeds": 3
+      },
+      "ECFP+descriptors + RF": {
+        "mean": 0.8799685910376233,
+        "std": 0.1147519295346911,
+        "n_seeds": 3
+      },
+      "descriptors + RF": {
+        "mean": 0.9264916477105984,
+        "std": 0.11854044812097526,
+        "n_seeds": 3
+      },
+      "D-MPNN": {
+        "mean": 0.9654047448150224,
+        "std": 0.12279719330387942,
+        "n_seeds": 3
+      },
+      "descriptors + linear": {
+        "mean": 1.0908874785423672,
+        "std": 0.04567899781595384,
+        "n_seeds": 3
+      },
+      "ECFP+descriptors + linear": {
+        "mean": 1.3028972998865223,
+        "std": 0.0810169926878547,
+        "n_seeds": 3
+      },
+      "ECFP + RF": {
+        "mean": 1.4287645952879722,
+        "std": 0.05046710760830891,
+        "n_seeds": 3
+      },
+      "ECFP + linear": {
+        "mean": 1.5656713326966003,
+        "std": 0.026081963994606376,
+        "n_seeds": 3
+      }
+    },
+    "reference": {
+      "metric": "rmse",
+      "chemprop_dmpnn": 0.98,
+      "source": "Yang et al. 2019 (scaffold)"
+    }
+  },
+  "freesolv": {
+    "metric": "rmse",
+    "n_seeds": 3,
+    "n_total": 642,
+    "n_tasks": 1,
+    "scaffold_leakage": 0.0,
+    "methods": {
+      "ECFP+descriptors + linear": {
+        "mean": 1.9678699638448272,
+        "std": 0.17263644948672408,
+        "n_seeds": 3
+      },
+      "D-MPNN + descriptors": {
+        "mean": 2.021877097520998,
+        "std": 0.11999601965270089,
+        "n_seeds": 3
+      },
+      "descriptors + RF": {
+        "mean": 2.0907716522431787,
+        "std": 0.7190761520247866,
+        "n_seeds": 3
+      },
+      "ECFP+descriptors + RF": {
+        "mean": 2.1174771145396707,
+        "std": 0.876315951304909,
+        "n_seeds": 3
+      },
+      "D-MPNN": {
+        "mean": 2.1434844673014353,
+        "std": 0.13960046138700705,
+        "n_seeds": 3
+      },
+      "descriptors + linear": {
+        "mean": 2.1747854997925886,
+        "std": 0.06292606520825872,
+        "n_seeds": 3
+      },
+      "ECFP + linear": {
+        "mean": 3.0221619148001024,
+        "std": 1.4109901329372205,
+        "n_seeds": 3
+      },
+      "ECFP + RF": {
+        "mean": 3.335684582041815,
+        "std": 1.7094129191386396,
+        "n_seeds": 3
+      }
+    },
+    "reference": {
+      "metric": "rmse",
+      "chemprop_dmpnn": 2.18,
+      "source": "Yang et al. 2019 (scaffold)"
+    }
+  },
+  "lipo": {
+    "metric": "rmse",
+    "n_seeds": 3,
+    "n_total": 4200,
+    "n_tasks": 1,
+    "scaffold_leakage": 0.0,
+    "methods": {
+      "D-MPNN": {
+        "mean": 0.6030193812683038,
+        "std": 0.05193062107910222,
+        "n_seeds": 3
+      },
+      "D-MPNN + descriptors": {
+        "mean": 0.6195136699248828,
+        "std": 0.0442642031786788,
+        "n_seeds": 3
+      },
+      "ECFP+descriptors + RF": {
+        "mean": 0.7394546027188021,
+        "std": 0.04645152054884608,
+        "n_seeds": 3
+      },
+      "descriptors + RF": {
+        "mean": 0.8606498427636557,
+        "std": 0.054513826854669434,
+        "n_seeds": 3
+      },
+      "ECFP + RF": {
+        "mean": 0.8787408160127116,
+        "std": 0.10584241795913246,
+        "n_seeds": 3
+      },
+      "ECFP+descriptors + linear": {
+        "mean": 0.8935660191916236,
+        "std": 0.024642366705293555,
+        "n_seeds": 3
+      },
+      "ECFP + linear": {
+        "mean": 0.9599472706579076,
+        "std": 0.0572814422561248,
+        "n_seeds": 3
+      },
+      "descriptors + linear": {
+        "mean": 0.9955238570411575,
+        "std": 0.04811451969653431,
+        "n_seeds": 3
+      }
+    },
+    "reference": {
+      "metric": "rmse",
+      "chemprop_dmpnn": 0.655,
+      "source": "Yang et al. 2019 (scaffold)"
+    }
   }
 }

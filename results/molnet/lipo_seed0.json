@@ -1,0 +1,52 @@
+{
+  "dataset": "lipo",
+  "seed": 0,
+  "task_type": "regression",
+  "metric": "rmse",
+  "n_total": 4200,
+  "n_train": 3360,
+  "n_valid": 420,
+  "n_test": 420,
+  "n_tasks": 1,
+  "scaffold_leakage_test": 0.0,
+  "methods": {
+    "ECFP + RF": {
+      "test_score": 1.0030960219439895,
+      "seconds": 274.9
+    },
+    "ECFP + linear": {
+      "test_score": 1.0320228227161086,
+      "seconds": 0.5
+    },
+    "descriptors + RF": {
+      "test_score": 0.8747420750419806,
+      "seconds": 12.5
+    },
+    "descriptors + linear": {
+      "test_score": 0.9957849673993266,
+      "seconds": 0.0
+    },
+    "ECFP+descriptors + RF": {
+      "test_score": 0.7846891508024996,
+      "seconds": 194.9
+    },
+    "ECFP+descriptors + linear": {
+      "test_score": 0.9177461506716317,
+      "seconds": 0.9
+    },
+    "D-MPNN": {
+      "test_score": 0.6465041274634024,
+      "valid_score": 0.5738710732991791,
+      "best_epoch": 54,
+      "seconds": 521.5,
+      "n_parameters": 62721
+    },
+    "D-MPNN + descriptors": {
+      "test_score": 0.6566264259584346,
+      "valid_score": 0.5883558210131467,
+      "best_epoch": 44,
+      "seconds": 480.9,
+      "n_parameters": 65793
+    }
+  }
+}

@@ -13,11 +13,14 @@ The point of the exercise is not that any one component is novel. It is that eve
 component is checked against something external --- published descriptor tables,
 analytically solvable free energies, finite-difference gradients, known topology,
 hand-computed hypergeometric tails --- and that the results are reported whichever
-way they come out. A D-MPNN reproduces published MoleculeNet numbers while losing to
-a fingerprint baseline on two of three datasets. Conformal intervals attain their
+way they come out. A D-MPNN reproduces published MoleculeNet numbers, loses to a plain
+fingerprint baseline on the smaller datasets, and wins on the largest by beating both
+the baselines and the published figure --- the regime crossover made visible rather
+than asserted. Conformal intervals attain their
 guaranteed coverage, and the adaptive variant that should improve on them helps on
 one dataset of three and the textbook construction is worse on all of them. The
-generator first scored \emph{below} its own untrained control, which turned out to be
-two bugs rather than a weak model. Each of these is reported here as measured,
+generator first scored \emph{below} its own untrained control; that was two bugs, and
+fixing them took it to \genModelValidity{} validity against a \genBaselineValidity{}
+control, with every remaining failure a single nameable gap. Each of these is reported here as measured,
 because a pipeline that only produces good numbers is not a pipeline anyone can use.
 \end{abstract}

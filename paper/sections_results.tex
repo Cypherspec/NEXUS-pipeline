@@ -40,11 +40,19 @@ The D-MPNN reproduces published numbers under the same protocol: BACE
 It is not the headline. On BACE a plain ECFP-plus-descriptor random forest reaches
 \molnetBaceEcfpDescriptorsRf{}, and on BBBP an ECFP random forest reaches
 \molnetBbbpEcfpRf{} --- both ahead of the message-passing network, on datasets of one
-to two thousand molecules. The neural model wins on ClinTox
-(\molnetClintoxDMpnn{} against \molnetClintoxEcfpRf{}). This is the expected
-regime behaviour at these dataset sizes, and it is reported because the alternative
---- quoting only the dataset where the fancier model wins --- is how benchmark tables
-become untrustworthy.
+to two thousand molecules.
+
+Where the neural model wins is where the regime argument says it should. On
+Lipophilicity, the largest set here at 4\,200 molecules, the D-MPNN reaches
+\molnetLipoDMpnn{} RMSE: ahead of every fingerprint baseline
+(\molnetLipoEcfpDescriptorsRf{} for the best of them) and ahead of the published
+0.655 for the same architecture and protocol \cite{yang2019analyzing}. It also
+wins on ClinTox (\molnetClintoxDMpnn{} against \molnetClintoxEcfpRf{}). A learned
+representation needs data to pay for itself, and across these six datasets the
+crossover is visible rather than asserted.
+
+Both halves are reported because quoting only the dataset where the fancier model
+wins is how benchmark tables become untrustworthy.
 
 \subsection{Binding affinity}
 

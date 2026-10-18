@@ -41,13 +41,20 @@ term anchors $x_{t-1}$ to $x_t$, starting empty dragged the entire trajectory ba
 towards empty.
 
 With a class-balanced bond loss (exponent \genClassBalance{}, bond weight
-\genBondWeight{}) and prior-initialised sampling, mean generated degree rises to
-\genModelDegree{} and strict validity to \genModelValidity{}, against
-\genBaselineValidity{} for the marginal baseline
-(Table~\ref{tab:generation}). Sampling the same trained model
-\emph{without} the valence constraint gives \genUnconstrainedValidity{} at mean
-degree \genUnconstrainedDegree{}, so the constraint is doing real work rather than
-masking a weak denoiser.
+\genBondWeight{}) and prior-initialised sampling, trained to \genSteps{} steps on
+\genTrainMolecules{} molecules, strict validity reaches \genModelValidity{} against
+\genBaselineValidity{} for the marginal baseline --- a model that was losing to its
+own control now beats it by a factor of thirty (Table~\ref{tab:generation}). Of the
+valid molecules, \genModelUnique{} are distinct and \genModelNovel{} do not appear in
+the training set, so the gain is not memorisation. Sampling the same trained model
+\emph{without} the valence constraint gives \genUnconstrainedValidity{} at mean degree
+\genUnconstrainedDegree{}, nearly all of it rejected for over-valence, so the
+constraint is doing real work rather than masking a weak denoiser.
+
+The correction overshot slightly: generated mean degree is \genModelDegree{} against a
+training mean of \genTrainDegree{}. The class weighting that lifted the model off the
+empty graph now pushes it a little past the data, which is worth stating because it is
+the same knob and the same failure mode in the other direction.
 
 \begin{table}[t]
 \centering\small
@@ -69,9 +76,12 @@ collapse.}
 \label{tab:generation}
 \end{table}
 
-What remains wrong is specific: \genDisconnectedShare{} of samples are rejected for
-being in two or more pieces, against \genValenceShare{} for valence errors. The model
-has no connectivity prior and the training objective supplies none. That is the next
+What remains wrong is specific, and it is now the only thing wrong:
+\genDisconnectedShare{} of samples are rejected for being in two or more pieces, and
+\genValenceShare{} for valence errors --- every remaining rejection is a connectivity
+failure. The model has no connectivity prior and the training objective supplies none.
+That is a single, nameable gap rather than a diffuse weakness, which is the most useful
+thing a negative result can leave behind. That is the next
 thing to fix, and it is stated here rather than hidden behind the lenient
 fragment-validity convention. These hyperparameters were selected on the validity
 metric reported above, with no held-out set, so that figure should be read as an
