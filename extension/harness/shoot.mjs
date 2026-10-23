@@ -64,7 +64,7 @@ console.log('backend ready');
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH });
 // A Mantis dock is a narrow column; shoot at that width so the layout is the
 // one the panel actually gets.
-const page = await browser.newPage({ viewport: { width: 420, height: 1000 },
+const page = await browser.newPage({ viewport: { width: Number(process.env.PANEL_WIDTH || 420), height: 1000 },
                                      deviceScaleFactor: 2, colorScheme: 'dark' });
 const problems = [];
 page.on('console', m => { if (m.type() === 'error') problems.push(m.text().slice(0, 160)); });

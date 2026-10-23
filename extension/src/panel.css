@@ -558,3 +558,63 @@ body {
 }
 
 .nexus-stack > div:has(> svg) > svg { display: block; }
+
+/* ── v0.5 · Studio layer ───────────────────────────────────────────────────
+   Near-black ground with a slow aurora, hairline gradient borders, a living
+   headline, and a two-column layout once the panel is wide. Motion is ambient
+   and stops for prefers-reduced-motion. */
+.nexus-root { position: relative; isolation: isolate; background: #06070b; }
+.nexus-root::before {
+    content: ""; position: absolute; inset: -20% -10% auto -10%; height: 520px; z-index: -1; pointer-events: none;
+    background:
+        radial-gradient(40% 55% at 20% 30%, rgb(91 157 255 / 0.16), transparent 70%),
+        radial-gradient(35% 50% at 80% 20%, rgb(143 123 255 / 0.13), transparent 70%),
+        radial-gradient(30% 40% at 55% 60%, rgb(103 232 249 / 0.07), transparent 70%);
+    filter: blur(8px);
+}
+.nexus-title-key, .nexus-mark {
+    background: linear-gradient(90deg, #a5dcff, #5b9dff 30%, #8f7bff 60%, #a5dcff) 0 0 / 220% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent !important;
+}
+.nexus-card {
+    position: relative;
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.035), rgb(255 255 255 / 0.012)), #0b0d13;
+    border: 1px solid transparent;
+    background-clip: padding-box;
+    box-shadow: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 12px 32px rgb(0 0 0 / 0.35);
+    transition: transform .25s ease, box-shadow .25s ease;
+}
+.nexus-card::after {
+    content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; pointer-events: none;
+    background: linear-gradient(140deg, rgb(165 220 255 / 0.32), rgb(91 157 255 / 0.06) 35%, rgb(143 123 255 / 0.05) 65%, rgb(143 123 255 / 0.28));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude;
+}
+.nexus-card:hover { transform: translateY(-1px); box-shadow: 0 1px 0 rgb(255 255 255 / 0.05) inset, 0 16px 40px rgb(0 0 0 / 0.45), 0 0 24px rgb(91 157 255 / 0.08); }
+.nexus-card-head { letter-spacing: 0.14em; }
+.nexus-tiles > * { position: relative; overflow: hidden; background: linear-gradient(180deg, rgb(91 157 255 / 0.07), rgb(255 255 255 / 0.01)), #0b0d13; border-color: rgb(165 220 255 / 0.12); }
+.nexus-tiles > *::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: linear-gradient(180deg, #a5dcff, #8f7bff); opacity: .7; }
+.nexus-run { position: relative; overflow: hidden; background: linear-gradient(90deg, #5b9dff, #8f7bff); box-shadow: 0 8px 24px rgb(91 157 255 / 0.22); }
+.nexus-run::after { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.28) 50%, transparent 70%) -150% 0 / 60% 100% no-repeat; }
+.nexus-tabs button[aria-pressed="true"] { background: linear-gradient(180deg, rgb(91 157 255 / 0.28), rgb(91 157 255 / 0.12)); box-shadow: inset 0 0 0 1px rgb(165 220 255 / 0.35); }
+.nexus-live { box-shadow: 0 0 0 0 rgb(103 232 249 / 0.5); }
+@media (min-width: 720px) {
+    .nexus-stack { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+    .nexus-stack > .nexus-tiles, .nexus-stack > .nexus-card:first-of-type, .nexus-stack > .nexus-error, .nexus-stack > .nexus-hint { grid-column: 1 / -1; }
+    .nexus-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: no-preference) {
+    .nexus-root::before { animation: nexus-aurora 18s ease-in-out infinite alternate; }
+    .nexus-title-key, .nexus-mark { animation: nexus-sheen 7s linear infinite; }
+    .nexus-run::after { animation: nexus-sweep 3.6s ease-in-out infinite; }
+    .nexus-live { animation: nexus-pulse 2.2s ease-out infinite; }
+    .nexus-stack > * { animation: nexus-rise 520ms cubic-bezier(.2,.7,.2,1) both; }
+    .nexus-stack > *:nth-child(2) { animation-delay: 60ms; } .nexus-stack > *:nth-child(3) { animation-delay: 120ms; }
+    .nexus-stack > *:nth-child(4) { animation-delay: 180ms; } .nexus-stack > *:nth-child(n+5) { animation-delay: 240ms; }
+}
+@keyframes nexus-aurora { 0% { transform: translate3d(-3%, 0, 0) scale(1); } 100% { transform: translate3d(4%, 3%, 0) scale(1.08); } }
+@keyframes nexus-sheen { to { background-position: -220% 0; } }
+@keyframes nexus-sweep { 0%, 55% { background-position: -150% 0; } 100% { background-position: 250% 0; } }
+@keyframes nexus-pulse { 0% { box-shadow: 0 0 0 0 rgb(103 232 249 / 0.45); } 100% { box-shadow: 0 0 0 8px rgb(103 232 249 / 0); } }
+@keyframes nexus-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.nexus-root { --nx-panel: #0b0d13; --nx-panel-raised: #0e1118; --nx-chrome: #0d1017; --nx-border: #1c2130; }
