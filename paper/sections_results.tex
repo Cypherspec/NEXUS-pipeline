@@ -18,7 +18,8 @@ and \goAnnotations{} annotations, recovers known pathway enrichments as positive
 controls, and on \goFpTrials{} random gene sets of \goFpGenes{} genes returns a mean
 of \goFpMeanTerms{} significant terms, with any hit at all in \goFpAnyHit{} of trials
 --- the false-positive behaviour the Benjamini--Hochberg procedure
-\cite{benjamini1995controlling} promises.
+\cite{benjamini1995controlling} promises. The enrichment the Mantis panel runs is a
+separate, pruned index and is validated separately (Section~\ref{sec:go}).
 
 \subsection{Property prediction}
 \label{sec:molnet}
@@ -131,3 +132,63 @@ the mean interval from \confLipoStdWidth{} to \confLipoSigmaWidth{}, at unchange
 marginal coverage (\confLipoSigmaCov{}). On ESOL the same change makes conditional
 coverage \emph{worse}, from \confEsolStdSpread{} to \confEsolSigmaSpread{}. The
 adaptive score is therefore offered as an option and left off by default.
+
+\subsection{Gene Ontology enrichment, and the ordering that breaks it}
+\label{sec:go}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\linewidth]{fig13_go_enrichment_validation}
+\caption{Left: terms called significant on random gene sets, which should be none.
+Correcting over only the terms that happen to have hits is well calibrated on large
+sets and badly miscalibrated on small ones, which is where enrichment is usually
+run. Centre and right: detection and rank for a term planted into a
+\goStudySize{}-gene set.}
+\label{fig:go}
+\end{figure*}
+
+The panel ships a pruned ontology: biological-process terms with between
+\goWindowLo{} and \goWindowHi{} annotated genes, \goTermsKept{} of \goTermsTotal{}
+terms over \goGenes{} gene symbols, interned as indices to fit the package limit at
+\goIndexMb{}~MB. Over-representation is hypergeometric, corrected across terms with
+Benjamini--Hochberg \cite{benjamini1995controlling} at
+$\mathrm{FDR}=\goAlpha{}$.
+
+Two conditions matter, and only the second is usually reported. An enrichment must
+recover biology that is there, and it must stay silent when there is none. The
+second is where this implementation was wrong. Terms were first dropped for having
+too few hits, and only the survivors entered the correction --- which makes the
+denominator depend on the outcomes being corrected. Both orderings are run here on
+identical random sets (Figure~\ref{fig:go}, left). On \goSmallSet{}-gene sets the
+defective ordering returns a mean of \goSmallBad{} significant terms drawn from
+nothing but noise, as many as \goSmallBadMax{} in one trial, with at least one term
+in \goSmallBadTrials{} of \goTrials{} trials. Correcting across every term in the
+window, including the ones that came back empty, gives \goSmallGood{}.
+
+The defect is invisible at the sizes one is most likely to test with: by
+\goLargeSet{}-gene sets the two orderings agree (\goLargeBad{} against
+\goLargeGood{}). It bites hardest on short, focused lists, because those leave few
+terms with any hits at all and the correction's denominator collapses onto the
+handful most likely to look significant. Across every set size, the shipped
+ordering never exceeds \goWorstGood{} terms per random set.
+
+Sensitivity is measured by planting $k$ genes from one term into a
+\goStudySize{}-gene set, over \goPlantedTerms{} terms (Figure~\ref{fig:go}, centre
+and right). The floor is sharp: \goFloorK{} planted genes are enough for every
+term to be detected and ranked inside the top ten, while \goLowK{} are recovered
+only \goLowRate{} of the time and land near rank thirty, far below anything a
+reader would scroll to. Diluting a whole term, rather than shrinking it, barely
+registers --- terms still rank first with most of the set replaced by noise --- so
+the floor, not a dilution curve, is the honest statement of what the method needs.
+
+Applied to the kinase inhibitor map, \goTargetsResolvedNames{} of
+\goTargetsTotal{} target names resolve, collapsing to \goTargetsMatched{} distinct
+genes --- a panel writes one kinase under several names, so the two counts are
+reported separately rather than conflated. Names are resolved by transformations
+that are accepted only when they land on a real gene, so a mutation suffix
+(\texttt{KIT(D816V)}), a phospho form (\texttt{ABL1p}) or a complex
+(\texttt{CDK4-cyclinD1}) reaches its parent gene and nothing else can be silently
+substituted. The remainder are previous HGNC symbols such as \texttt{ASK1} and
+\texttt{ARK5}; they are reported as unmatched rather than guessed at, since a
+mapping invented to raise the match rate is indistinguishable in the output from
+biology that was measured.

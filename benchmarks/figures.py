@@ -712,12 +712,91 @@ def fig_conformal_width_distribution() -> None:
     save(fig, "fig12_interval_width_spread")
 
 
+def _log_axis(ax, which: str, ticks: list) -> None:
+    """Log scale with only the ticks asked for.
+
+    Matplotlib keeps drawing minor decade labels on a log axis, which collide
+    with hand-chosen ticks at these ranges.
+    """
+    axis = ax.xaxis if which == "x" else ax.yaxis
+    (ax.set_xscale if which == "x" else ax.set_yscale)("log")
+    axis.set_major_locator(matplotlib.ticker.FixedLocator(ticks))
+    axis.set_major_formatter(matplotlib.ticker.FixedFormatter([str(t) for t in ticks]))
+    axis.set_minor_locator(matplotlib.ticker.NullLocator())
+    axis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+
+
+def fig_go_enrichment_validation() -> None:
+    """Calibration and sensitivity of the panel's GO enrichment.
+
+    The left panel is the one that matters: an enrichment that reports terms
+    for random gene sets reports nothing at all. It also shows why the defect
+    was easy to miss, since it only bites on small lists.
+    """
+    data = json.loads((RESULTS / "go_panel_validation.json").read_text())
+    sweep = data["calibration"]["sweep"]
+    curve = data["sensitivity"]["curve"]
+
+    fig, axes = plt.subplots(1, 3, figsize=(10.2, 2.9))
+
+    ax = axes[0]
+    sizes = [r["setSize"] for r in sweep]
+    ax.plot(sizes, [r["meanFilterFirst"] for r in sweep], "o-", color=RED,
+            lw=1.4, ms=4, label="corrected over terms with hits")
+    ax.plot(sizes, [r["mean"] for r in sweep], "o-", color=BLUE,
+            lw=1.4, ms=4, label="corrected over every term (shipped)")
+    _log_axis(ax, "x", sizes)
+    ax.set_xlabel("genes in the random set")
+    ax.set_ylabel("terms called significant")
+    ax.set_title("Calibration: random sets, FDR 0.05", loc="left")
+    ax.legend(loc="upper right", fontsize=7.2)
+    ax.annotate(f"{sweep[0]['meanFilterFirst']:.1f} terms from noise",
+                xy=(sizes[0], sweep[0]["meanFilterFirst"]),
+                xytext=(0.30, 0.62), textcoords="axes fraction",
+                fontsize=7.2, color=RED,
+                arrowprops=dict(arrowstyle="-", color=RED, lw=0.6))
+
+    ax = axes[1]
+    ks = [r["planted"] for r in curve]
+    n = curve[0]["nTerms"]
+    # The two series sit on top of each other once both saturate, so the
+    # upper one is dashed rather than drawn over the lower one.
+    ax.plot(ks, [r["recovered"] / n for r in curve], "o-", color=BLUE,
+            lw=2.2, ms=5, label="term detected")
+    ax.plot(ks, [r["inTop10"] / n for r in curve], "o--", color=AQUA,
+            lw=1.4, ms=3.5, label="ranked in the top 10")
+    _log_axis(ax, "x", ks)
+    ax.set_ylim(-0.04, 1.04)
+    ax.set_xlabel(f"genes planted from one term (set size {curve[0]['studySize']})")
+    ax.set_ylabel("fraction of planted terms")
+    ax.set_title("Sensitivity: detection floor", loc="left")
+    ax.legend(loc="lower right", fontsize=7.2)
+
+    ax = axes[2]
+    ranks = [r["medianRank"] for r in curve]
+    shown = [(k, r) for k, r in zip(ks, ranks) if r]
+    ax.plot([k for k, _ in shown], [r for _, r in shown], "o-", color=BLUE,
+            lw=1.4, ms=4)
+    _log_axis(ax, "x", ks)
+    _log_axis(ax, "y", [1, 3, 10, 30])
+    ax.axhline(10, color=MUTED, lw=0.6, ls=(0, (3, 3)))
+    ax.text(ks[-1], 10.8, "top of the panel's list", fontsize=7, color=MUTED,
+            ha="right", va="bottom")
+    ax.set_xlabel("genes planted from one term")
+    ax.set_ylabel("median rank of that term")
+    ax.set_title("Sensitivity: where it lands", loc="left")
+
+    fig.tight_layout()
+    save(fig, "fig13_go_enrichment_validation")
+
+
 def main() -> None:
     print("rendering figures from results/ ...")
     for fn in (fig_molnet, fig_active_learning, fig_conformal, fig_free_energy,
                fig_descriptors, fig_topology, fig_ricci, fig_gene_ontology,
                fig_scaffold_split, fig_adaptive_conformal,
-               fig_shape_signatures, fig_conformal_width_distribution):
+               fig_shape_signatures, fig_conformal_width_distribution,
+               fig_go_enrichment_validation):
         try:
             fn()
         except Exception as exc:                      # noqa: BLE001

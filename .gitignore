@@ -27,3 +27,5 @@ paper/*.out
 # Mantis screenshot harness build artefacts (node_modules is a local symlink)
 mantis/harness/node_modules
 mantis/harness/bundle.js
+paper/main.fls
+paper/main.fdb_latexmk

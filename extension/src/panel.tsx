@@ -87,6 +87,7 @@ interface EnrichResult {
     nSignificant: number;
     nStudyGenes: number;
     nUnmatched: number;
+    nResolvedNames: number;
     unmatched: string[];
     population: number;
     background: string;
@@ -320,11 +321,12 @@ const NexusExtensionPanel: React.FC = () => {
         for (const point of source) {
             const raw = (point.metadata ?? {})[column];
             if (typeof raw !== 'string') continue;
-            // One cell may carry several targets; split on the usual separators
-            // and strip the mutation suffixes a kinase panel writes, since the
-            // ontology keys on the gene symbol.
+            // One cell may carry several targets, so split on the usual
+            // separators. Nothing is normalised here: the backend holds the
+            // ontology and resolves names against it, and a second normaliser
+            // on this side would be free to drift away from that one.
             for (const piece of raw.split(/[;,|/]+/)) {
-                const symbol = piece.trim().replace(/\(.*?\)/g, '').replace(/[-\s]*phosphorylated$/i, '').trim();
+                const symbol = piece.trim();
                 if (symbol) found.add(symbol);
             }
         }
@@ -746,11 +748,13 @@ const NexusExtensionPanel: React.FC = () => {
                 {mode === 'targets' && enrichResult && (
                     <div className="nexus-stack nexus-enter">
                         <div className="nexus-tiles">
-                            <StatTile label="Targets matched"
+                            <StatTile label="Genes matched"
                                 value={String(enrichResult.nStudyGenes)}
                                 hint={enrichResult.nUnmatched > 0
-                                    ? `${enrichResult.nUnmatched} not in the ontology`
-                                    : 'every symbol resolved'}
+                                    ? `from ${enrichResult.nResolvedNames} of ${
+                                        enrichResult.nResolvedNames + enrichResult.nUnmatched
+                                      } names · ${enrichResult.nUnmatched} not in the ontology`
+                                    : `from ${enrichResult.nResolvedNames} names, all resolved`}
                                 tone={enrichResult.nUnmatched > enrichResult.nStudyGenes / 2
                                     ? 'warn' : 'default'}
                                 theme={theme} />

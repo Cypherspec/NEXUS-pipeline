@@ -186,16 +186,6 @@ def main() -> None:
             lines += [macro("descriptorBest", pct(max(exact))),
                       macro("descriptorMolecules", dig(n))]
 
-    go = load("go_validation.json")
-    if go:
-        lines.append(macro("goTerms", dig(go.get("n_terms"))))
-        lines.append(macro("goAnnotations", dig(go.get("n_annotations"))))
-        fp = go.get("false_positive_control", {})
-        lines += [macro("goFpTrials", dig(fp.get("n_trials"))),
-                  macro("goFpGenes", dig(fp.get("genes_per_trial"))),
-                  macro("goFpMeanTerms", num(fp.get("mean_significant_terms"), 2)),
-                  macro("goFpAnyHit", pct(fp.get("fraction_trials_with_any_hit")))]
-
     # --- Shape: topology and curvature
     shape = load("shape_validation.json")
     if shape:
@@ -211,6 +201,61 @@ def main() -> None:
                   macro("shapeRecoveryExact", pct(recovery.get("exact_match_fraction"))),
                   macro("shapeRecoveryMae", num(recovery.get("mean_absolute_error"), 3)),
                   macro("shapeLifeThreshold", num(shape.get("life_threshold"), 2))]
+
+    go = load("go_validation.json")
+    if go:
+        lines.append(macro("goTerms", dig(go.get("n_terms"))))
+        lines.append(macro("goAnnotations", dig(go.get("n_annotations"))))
+        fp = go.get("false_positive_control", {})
+        lines += [macro("goFpTrials", dig(fp.get("n_trials"))),
+                  macro("goFpGenes", dig(fp.get("genes_per_trial"))),
+                  macro("goFpMeanTerms", num(fp.get("mean_significant_terms"), 2)),
+                  macro("goFpAnyHit", pct(fp.get("fraction_trials_with_any_hit")))]
+
+    # --- Gene Ontology enrichment in the Mantis panel
+    panel_go = load("go_panel_validation.json")
+    if panel_go:
+        onto = panel_go.get("ontology", {})
+        lines += [macro("goTermsKept", dig(onto.get("nTermsKept"))),
+                  macro("goTermsTotal", dig(onto.get("nTermsTotal"))),
+                  macro("goGenes", dig(onto.get("nGenes"))),
+                  macro("goIndexMb", num((onto.get("indexBytes") or 0) / 1e6, 1))]
+        window = onto.get("window") or []
+        if len(window) == 2:
+            lines += [macro("goWindowLo", dig(window[0])),
+                      macro("goWindowHi", dig(window[1]))]
+
+        sweep = panel_go["calibration"]["sweep"]
+        small, large = sweep[0], sweep[-1]
+        lines += [macro("goAlpha", num(panel_go["calibration"].get("alpha"), 2)),
+                  macro("goTrials", dig(panel_go["calibration"].get("nTrials"))),
+                  macro("goSmallSet", dig(small.get("setSize"))),
+                  macro("goLargeSet", dig(large.get("setSize"))),
+                  macro("goSmallBad", num(small.get("meanFilterFirst"), 1)),
+                  macro("goSmallBadMax", dig(small.get("maxFilterFirst"))),
+                  macro("goSmallBadTrials", dig(small.get("trialsWithAnyFilterFirst"))),
+                  macro("goSmallGood", num(small.get("mean"), 2)),
+                  macro("goLargeBad", num(large.get("meanFilterFirst"), 2)),
+                  macro("goLargeGood", num(large.get("mean"), 2)),
+                  macro("goWorstGood", num(max(r["mean"] for r in sweep), 2))]
+
+        curve = panel_go["sensitivity"]["curve"]
+        floor = next((r for r in curve if r["rate"] >= 1.0), curve[-1])
+        top10 = next((r for r in curve if r["inTop10"] == r["nTerms"]), curve[-1])
+        lines += [macro("goPlantedTerms", dig(curve[0].get("nTerms"))),
+                  macro("goStudySize", dig(curve[0].get("studySize"))),
+                  macro("goFloorK", dig(floor.get("planted"))),
+                  macro("goTopTenK", dig(top10.get("planted"))),
+                  macro("goLowK", dig(curve[0].get("planted"))),
+                  macro("goLowRate", pct(curve[0].get("rate")))]
+
+        davis = panel_go.get("davis") or {}
+        lines += [macro("goTargetsTotal", dig(davis.get("nSymbols"))),
+                  macro("goTargetsMatched", dig(davis.get("nMatched"))),
+                  macro("goTargetsResolvedNames", dig(davis.get("nResolvedNames"))),
+                  macro("goTargetsNormalised", dig(davis.get("nRewritten"))),
+                  macro("goTargetsEnriched", dig(davis.get("nSignificant"))),
+                  macro("goTargetsTested", dig(davis.get("nTested")))]
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text("\n".join(lines) + "\n")

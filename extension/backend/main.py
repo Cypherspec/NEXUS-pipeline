@@ -531,7 +531,7 @@ def enrich(payload: dict, ctx: dict) -> dict:
     if len(requested) > 5000:
         raise PayloadError("at most 5000 genes can be tested at once")
 
-    study, unmatched, rewritten = set(), [], 0
+    study, unmatched, rewritten, resolved = set(), [], 0, 0
     for name in requested:
         if not isinstance(name, str) or not name.strip():
             continue
@@ -541,6 +541,10 @@ def enrich(payload: dict, ctx: dict) -> dict:
             continue
         if matched_as and matched_as.upper() != name.strip().upper():
             rewritten += 1
+        # Names and genes are different counts: a kinase panel writes one gene
+        # under several names, so these must be reported separately or the
+        # matched and unmatched totals will not add up to what was sent.
+        resolved += 1
         study.add(idx)
     if not study:
         raise PayloadError("none of those gene symbols appear in the ontology")
@@ -602,6 +606,7 @@ def enrich(payload: dict, ctx: dict) -> dict:
         "nStudyGenes": drawn,
         "nUnmatched": len(unmatched),
         "nRewritten": rewritten,
+        "nResolvedNames": resolved,
         "unmatched": unmatched[:25],
         "population": population,
         "background": background_label,
