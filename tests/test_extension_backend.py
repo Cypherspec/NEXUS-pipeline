@@ -5,6 +5,7 @@ The backend is loaded the way Mantis loads it -- as a module file, calling
 tests exercise the same entry point the host uses.
 """
 
+import random
 import importlib.util
 import sys
 from pathlib import Path
@@ -225,3 +226,61 @@ def test_shape_picks_the_most_ring_rich_when_none_is_named(backend):
 def test_shape_rejects_a_payload_with_neither_smiles_nor_molecules(backend):
     with pytest.raises(ValueError):
         backend.invoke("shape", {}, CTX)
+
+
+def test_enrich_recovers_a_planted_process(backend):
+    """A study set drawn from one GO term must surface that term."""
+    index = backend._go_index()
+    term = max(
+        (t for t in index["terms"] if 40 <= len(t["gene_set"]) <= 120),
+        key=lambda t: len(t["gene_set"]),
+    )
+    genes = [index["genes"][i] for i in sorted(term["gene_set"])]
+    out = backend.invoke("enrich", {"genes": genes}, CTX)
+
+    assert out["nStudyGenes"] == len(genes)
+    hit = next((r for r in out["terms"] if r["id"] == term["id"]), None)
+    assert hit is not None, f"{term['name']} not recovered"
+    assert hit["foldEnrichment"] > 1.0
+    assert hit["studyHits"] == len(genes)
+
+
+def test_enrich_is_calibrated_on_random_gene_sets(backend):
+    """Random sets must not come back enriched.
+
+    The earlier implementation filtered tests by hit count before the
+    Benjamini-Hochberg step, which selects tests by their own outcome and
+    shrinks the correction's denominator. That returned ~18 "significant"
+    terms for sets with no biology in them at all.
+    """
+    index = backend._go_index()
+    rng = random.Random(0xC0FFEE)
+
+    counts = []
+    for _ in range(8):
+        genes = rng.sample(index["genes"], 120)
+        counts.append(backend.invoke("enrich", {"genes": genes}, CTX)["nSignificant"])
+
+    mean = sum(counts) / len(counts)
+    assert mean < 2.0, f"false positives per random set: {counts}"
+
+
+def test_enrich_normalises_only_onto_real_genes(backend):
+    """A transformation is accepted only when it resolves."""
+    lookup = backend._go_index()["gene_lookup"]
+
+    assert backend._resolve_symbol("ABL1", lookup)[1] == "ABL1"
+    assert backend._resolve_symbol("ABL1p", lookup)[1] == "ABL1"
+    assert backend._resolve_symbol("KIT(D816V)", lookup)[1] == "KIT"
+    assert backend._resolve_symbol("CDK4-cyclinD1", lookup)[1] == "CDK4"
+    # No stem resolves, so nothing is substituted.
+    assert backend._resolve_symbol("NOTAGENE-partner", lookup) == (None, None)
+    assert backend._resolve_symbol("", lookup) == (None, None)
+
+
+def test_enrich_reports_unmatched_rather_than_dropping_them(backend):
+    out = backend.invoke("enrich", {"genes": ["EGFR", "QQQNOTAGENE", "ABL1p"]}, CTX)
+    assert out["nUnmatched"] == 1
+    assert out["unmatched"] == ["QQQNOTAGENE"]
+    assert out["nStudyGenes"] == 2
+    assert out["nRewritten"] == 1

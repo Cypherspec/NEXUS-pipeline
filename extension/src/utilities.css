@@ -54,11 +54,28 @@
 .shadow-lg { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.35), 0 4px 6px -4px rgb(0 0 0 / 0.3); }
 
 .text-center { text-align: center; }
+.text-left { text-align: left; }
+
+/* The result tables: fixed layout is what lets a long process name
+ * truncate instead of pushing the numeric columns off the panel. */
+.w-full { width: 100%; }
+.table-fixed { table-layout: fixed; }
+.w-\[54\%\] { width: 54%; }
+.w-\[50\%\] { width: 50%; }
+.w-\[52\%\] { width: 52%; }
+.w-\[40\%\] { width: 40%; }
+.w-5 { width: 1.25rem; }
+.shrink-0 { flex-shrink: 0; }
+.text-right { text-align: right; }
+.pr-1 { padding-right: 0.25rem; }
+.space-y-0\.5 > * + * { margin-top: 0.125rem; }
+.py-0\.5 { padding-top: 0.125rem; padding-bottom: 0.125rem; }
 .uppercase { text-transform: uppercase; }
 .underline { text-decoration-line: underline; }
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tabular-nums { font-variant-numeric: tabular-nums; }
 .font-mono { font-family: var(--nx-font-mono); }
+.font-normal { font-weight: 400; }
 .font-medium { font-weight: 500; }
 .font-semibold { font-weight: 600; }
 

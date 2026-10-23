@@ -22,6 +22,8 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
 
 const server = createServer(async (req, res) => {
     const rel = (req.url || '/').split('?')[0];
+    // Chromium asks for this unprompted; a 404 here is noise that hides real ones.
+    if (rel === '/favicon.ico') { res.writeHead(204).end(); return; }
     const file = path.join(root, rel === '/' ? 'harness/index.html' : rel);
     try {
         const body = await readFile(file);
@@ -126,7 +128,17 @@ await page.waitForTimeout(1500);
 await page.screenshot({ path: `${out}/ext_07_predict.png` });
 await page.locator('.nexus-controls input[type="checkbox"]').first().check().catch(() => undefined);
 
+// Writing a bag is a user action, not a side effect of analysing: clicking a
+// scaffold family is what exercises bags:write and edges:write end to end.
+await page.locator('.nexus-controls button').first().click();
+await page.waitForTimeout(2500);
+const family = page.locator('.nexus-families button').first();
+if (await family.count()) {
+    await family.click();
+    await page.waitForTimeout(600);
+}
 console.log('bag written:', JSON.stringify(await page.evaluate(() => window.__NEXUS_BAG__ ?? null)));
+console.log('bag highlighted:', JSON.stringify(await page.evaluate(() => window.__NEXUS_HIGHLIGHT__ ?? null)));
 console.log('selection size:', await page.evaluate(async () => (await window.mantis.selection.get()).selected.length));
 console.log(problems.length ? `console errors (${problems.length}):\n  ${problems.slice(0, 4).join('\n  ')}` : 'no console errors');
 await browser.close();

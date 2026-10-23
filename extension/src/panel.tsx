@@ -26,13 +26,17 @@ import {
 } from '../../mantis/src/app/components/panels/nexus/three';
 import { gradientText, nexusTheme } from '../../mantis/src/app/components/panels/nexus/theme';
 
+/** Metadata keys searched, in order, for a gene or protein identifier. */
+const GENE_KEYS = ['gene', 'genes', 'symbol', 'gene_symbol', 'target', 'targets',
+                   'target_gene', 'protein', 'uniprot'];
+
 /** Metadata keys searched, in order, for a structure string. */
 const SMILES_KEYS = ['smiles', 'SMILES', 'Smiles', 'canonical_smiles', 'structure', 'mol'];
 
 /** Bag this panel writes scaffold families into, so it only clears its own. */
 const BAG_PREFIX = 'NEXUS scaffold';
 
-type Mode = 'analyze' | 'screen' | 'predict' | 'shape';
+type Mode = 'analyze' | 'screen' | 'predict' | 'shape' | 'targets';
 type Phase = 'idle' | 'running' | 'done' | 'error';
 
 interface MantisPoint {
@@ -63,6 +67,32 @@ interface ScreenResult {
     nMeasured: number;
     nPool: number;
     rationale: string;
+}
+
+interface EnrichmentTerm {
+    id: string;
+    name: string;
+    studyHits: number;
+    termSize: number;
+    expected: number;
+    foldEnrichment: number;
+    pValue: number;
+    fdr: number;
+    genes: string[];
+}
+
+interface EnrichResult {
+    terms: EnrichmentTerm[];
+    nTested: number;
+    nSignificant: number;
+    nStudyGenes: number;
+    nUnmatched: number;
+    unmatched: string[];
+    population: number;
+    background: string;
+    alpha: number;
+    window: number[];
+    aspect: string;
 }
 
 interface ShapeResult {
@@ -171,6 +201,8 @@ const NexusExtensionPanel: React.FC = () => {
     const [prediction, setPrediction] = useState<PredictResult | null>(null);
     const [shapeResult, setShapeResult] = useState<ShapeResult | null>(null);
     const [shapeTarget, setShapeTarget] = useState<string>('');
+    const [enrichResult, setEnrichResult] = useState<EnrichResult | null>(null);
+    const [geneColumn, setGeneColumn] = useState('');
 
     const [labelColumn, setLabelColumn] = useState('');
     const [batchSize, setBatchSize] = useState(24);
@@ -266,6 +298,39 @@ const NexusExtensionPanel: React.FC = () => {
 
     const columns = useMemo(() => numericColumns(points), [points]);
 
+    /** Metadata columns that look like they hold gene or protein identifiers. */
+    const geneColumns = useMemo(() => {
+        const seen = new Set<string>();
+        for (const point of points) {
+            for (const key of Object.keys(point.metadata ?? {})) {
+                if (GENE_KEYS.includes(key.toLowerCase())) seen.add(key);
+            }
+        }
+        return [...seen];
+    }, [points]);
+
+    /** Gene symbols on the points in scope, deduplicated. */
+    const genes = useMemo(() => {
+        const column = geneColumn || geneColumns[0];
+        if (!column) return [];
+        const source = scope === 'selection' && selectedIds.length
+            ? selectedIds.map(id => pointById.get(id)).filter(Boolean) as MantisPoint[]
+            : points;
+        const found = new Set<string>();
+        for (const point of source) {
+            const raw = (point.metadata ?? {})[column];
+            if (typeof raw !== 'string') continue;
+            // One cell may carry several targets; split on the usual separators
+            // and strip the mutation suffixes a kinase panel writes, since the
+            // ontology keys on the gene symbol.
+            for (const piece of raw.split(/[;,|/]+/)) {
+                const symbol = piece.trim().replace(/\(.*?\)/g, '').replace(/[-\s]*phosphorylated$/i, '').trim();
+                if (symbol) found.add(symbol);
+            }
+        }
+        return [...found];
+    }, [geneColumn, geneColumns, points, pointById, scope, selectedIds]);
+
     /** Measured values for the molecules in scope, read from a metadata column. */
     const measured = useMemo(() => {
         const out: Record<string, number> = {};
@@ -338,6 +403,12 @@ const NexusExtensionPanel: React.FC = () => {
                     await window.mantis.selection.set(result.batch.map(b => b.id), mapId ?? undefined);
                     setNote(`Selected the ${result.batch.length} proposed molecules on the map.`);
                 }
+            } else if (mode === 'targets') {
+                if (genes.length === 0) {
+                    throw new Error('no gene or protein identifiers on the points in scope');
+                }
+                setEnrichResult(await window.mantis.backend.invoke('enrich',
+                    { genes, alpha: 0.05 }));
             } else if (mode === 'shape') {
                 // One molecule at a time: persistence over a conformer is the
                 // most expensive thing this backend does, and the answer is
@@ -361,8 +432,8 @@ const NexusExtensionPanel: React.FC = () => {
             setPhase('error');
             setError((e as Error).message);
         }
-    }, [adaptive, batchSize, colourBy, mapId, measured, mode, molecules, pointById,
-        selectedIds, shapeTarget]);
+    }, [adaptive, batchSize, colourBy, genes, mapId, measured, mode, molecules,
+        pointById, selectedIds, shapeTarget]);
 
     /** Puts one scaffold family on the map as a highlighted bag. */
     const highlightFamily = useCallback(async (family: { scaffold: string; pointIds: string[] }) => {
@@ -435,14 +506,15 @@ const NexusExtensionPanel: React.FC = () => {
                 background: theme.surface }}>
                 <div className="nexus-tabs" style={{ background: theme.surfaceInset,
                     border: `1px solid ${theme.line}` }}>
-                    {(['analyze', 'screen', 'predict', 'shape'] as const).map(key => (
+                    {(['analyze', 'screen', 'predict', 'shape', 'targets'] as const).map(key => (
                         <button key={key} type="button" onClick={() => setMode(key)}
                             aria-pressed={mode === key}
                             style={mode === key
                                 ? { background: theme.accent, color: '#fff' }
                                 : { color: theme.text2 }}>
                             {key === 'analyze' ? 'Analyze' : key === 'screen' ? 'Next batch'
-                                : key === 'predict' ? 'Predict' : 'Shape'}
+                                : key === 'predict' ? 'Predict'
+                                    : key === 'shape' ? 'Shape' : 'Targets'}
                         </button>
                     ))}
                 </div>
@@ -479,6 +551,19 @@ const NexusExtensionPanel: React.FC = () => {
                     </div>
                 )}
 
+                {mode === 'targets' && (
+                    <div className="nexus-row">
+                        <label style={{ color: theme.text3 }}>Gene column</label>
+                        <select value={geneColumn || geneColumns[0] || ''}
+                            onChange={e => setGeneColumn(e.target.value)}
+                            style={{ ...inputStyle, maxWidth: '12rem' }}>
+                            {geneColumns.length === 0 && <option value="">none found</option>}
+                            {geneColumns.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                        <span style={{ color: theme.text3 }}>{genes.length} symbols</span>
+                    </div>
+                )}
+
                 {mode === 'shape' && (
                     <div className="nexus-row">
                         <label style={{ color: theme.text3 }}>Molecule</label>
@@ -507,7 +592,8 @@ const NexusExtensionPanel: React.FC = () => {
                         : mode === 'analyze' ? `Analyze ${molecules.length}`
                             : mode === 'screen' ? `Propose ${batchSize} to screen`
                                 : mode === 'predict' ? 'Predict unmeasured'
-                                    : 'Analyse shape'}
+                                    : mode === 'shape' ? 'Analyse shape'
+                                        : `Enrich ${genes.length} targets`}
                 </button>
 
                 {molecules.length === 0 && (
@@ -657,6 +743,88 @@ const NexusExtensionPanel: React.FC = () => {
                     </div>
                 )}
 
+                {mode === 'targets' && enrichResult && (
+                    <div className="nexus-stack nexus-enter">
+                        <div className="nexus-tiles">
+                            <StatTile label="Targets matched"
+                                value={String(enrichResult.nStudyGenes)}
+                                hint={enrichResult.nUnmatched > 0
+                                    ? `${enrichResult.nUnmatched} not in the ontology`
+                                    : 'every symbol resolved'}
+                                tone={enrichResult.nUnmatched > enrichResult.nStudyGenes / 2
+                                    ? 'warn' : 'default'}
+                                theme={theme} />
+                            <StatTile label="Enriched terms"
+                                value={String(enrichResult.nSignificant)}
+                                hint={`of ${enrichResult.nTested} tested · FDR ${enrichResult.alpha}`}
+                                tone={enrichResult.nSignificant > 0 ? 'good' : 'default'}
+                                theme={theme} />
+                        </div>
+
+                        {enrichResult.terms.length > 0 ? (
+                            <ViewBoundary label="The enrichment chart" theme={theme}>
+                                <RankedBars
+                                    title="Over-represented processes"
+                                    note="fold enrichment · BH-adjusted"
+                                    items={enrichResult.terms.slice(0, 12).map(term => ({
+                                        label: term.name,
+                                        value: term.foldEnrichment,
+                                        sublabel: `${term.id} · ${term.studyHits}/${term.termSize} genes · FDR ${term.fdr.toExponential(1)}`,
+                                    }))}
+                                    valueFormat={v => `${v.toFixed(1)}×`}
+                                    theme={theme} />
+                            </ViewBoundary>
+                        ) : (
+                            <p className="nexus-hint" style={{ color: theme.text3 }}>
+                                Nothing was over-represented in these targets beyond what
+                                chance explains.
+                            </p>
+                        )}
+
+                        <div>
+                            <div className="mb-1 text-[10px] font-medium uppercase tracking-[0.14em]"
+                                style={{ color: theme.text2 }}>Terms</div>
+                            <table className="w-full table-fixed text-[10px]">
+                                <thead>
+                                    <tr className="text-left" style={{ color: theme.text3 }}>
+                                        <th className="w-[54%] font-normal">process</th>
+                                        <th className="font-normal">genes</th>
+                                        <th className="font-normal">fold</th>
+                                        <th className="font-normal">FDR</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="tabular-nums">
+                                    {enrichResult.terms.slice(0, 25).map(term => (
+                                        <tr key={term.id}
+                                            style={{ borderTop: `1px solid ${theme.line}` }}>
+                                            <td className="truncate pr-1"
+                                                title={`${term.id}: ${term.genes.join(', ')}`}>
+                                                {term.name}
+                                            </td>
+                                            <td>{term.studyHits}/{term.termSize}</td>
+                                            <td>{term.foldEnrichment.toFixed(1)}×</td>
+                                            <td style={{ color: term.fdr <= enrichResult.alpha
+                                                ? theme.good : theme.text3 }}>
+                                                {term.fdr.toExponential(1)}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <p className="nexus-hint" style={{ color: theme.text3 }}>
+                            Hypergeometric over-representation with Benjamini–Hochberg
+                            control, against {enrichResult.background} ({enrichResult.population}
+                            {' '}genes). The shipped ontology is the biological-process aspect
+                            restricted to terms annotated to {enrichResult.window[0]}–
+                            {enrichResult.window[1]} genes, which is the window
+                            over-representation analysis is defined on.
+                            {enrichResult.nUnmatched > 0 && ` Unmatched: ${enrichResult.unmatched.slice(0, 6).join(', ')}.`}
+                        </p>
+                    </div>
+                )}
+
                 {mode === 'shape' && shapeResult && (
                     <div className="nexus-stack nexus-enter">
                         <div className="nexus-tiles">
@@ -701,7 +869,8 @@ const NexusExtensionPanel: React.FC = () => {
                     </div>
                 )}
 
-                {phase === 'idle' && !analysis && !batch && !prediction && !shapeResult && (
+                {phase === 'idle' && !analysis && !batch && !prediction && !shapeResult
+                    && !enrichResult && (
                     <div className="nexus-stack nexus-enter">
                         <p style={{ color: theme.text2, fontSize: 11, lineHeight: 1.6 }}>
                             NEXUS reads the molecules behind the points on this map. Results go back
