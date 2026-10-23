@@ -6,6 +6,7 @@ new chemical series rather than memorising close analogues.
 
 from __future__ import annotations
 
+from dataclasses import replace as _replace
 from collections import defaultdict
 
 import numpy as np
@@ -97,16 +98,14 @@ def _shortest_path(mol: Molecule, src: int, dst: int) -> list[int]:
 
 def subgraph(mol: Molecule, atom_indices: list[int]) -> Molecule:
     """Induced subgraph on the given atoms, as a new perceived Molecule."""
-    import copy as _copy
-
     index_map = {old: new for new, old in enumerate(atom_indices)}
     sub = Molecule(
-        atoms=[_copy.replace(mol.atoms[i]) for i in atom_indices],
+        atoms=[_replace(mol.atoms[i]) for i in atom_indices],
         bonds=[],
     )
     for bond in mol.bonds:
         if bond.a in index_map and bond.b in index_map:
-            sub.bonds.append(_copy.replace(bond, a=index_map[bond.a], b=index_map[bond.b]))
+            sub.bonds.append(_replace(bond, a=index_map[bond.a], b=index_map[bond.b]))
     # Atoms lose substituents, so hydrogen counts must be recomputed.
     for atom in sub.atoms:
         if not atom.in_bracket:

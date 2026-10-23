@@ -485,23 +485,45 @@ const NexusExtensionPanel: React.FC = () => {
     };
     const busy = phase === 'running' || molecules.length === 0;
 
+    // Mode, map and result in one line: the verb, the thing it acts on, and a
+    // note underneath. The middle phrase is what carries the gradient, so it
+    // has to be the part worth reading.
+    const headline: [string, string, string] = useMemo(() => {
+        const n = molecules.length;
+        if (mode === 'screen') {
+            return ['Next batch of', `${Math.min(batchSize, n)} molecules`,
+                'Chosen for chemical spread, then written back as the selection'];
+        }
+        if (mode === 'predict') {
+            return ['Predicts', labelColumn || 'a measured column',
+                'Conformal intervals at 90%, calibrated on the measured points'];
+        }
+        if (mode === 'shape') {
+            return ['Shape of', (shapeTarget ? `${shapeTarget.slice(0, 22)}…` : 'the most ring-rich molecule'),
+                'Persistent homology and Ricci curvature on one structure'];
+        }
+        if (mode === 'targets') {
+            return ['Targets across', `${genes.length.toLocaleString()} symbols`,
+                'Gene Ontology over-representation, BH-corrected at FDR 0.05'];
+        }
+        return ['Chemistry of', `${n.toLocaleString()} molecule${n === 1 ? '' : 's'}`,
+            'Every point is a molecule · scaffolds, descriptors and neighbours'];
+    }, [batchSize, genes.length, labelColumn, mode, molecules.length, shapeTarget]);
+
     return (
         <div className="nexus-root" style={{ background: theme.bg, color: theme.text }}>
-            <header style={{ borderBottom: `1px solid ${theme.line}`, background: theme.surface }}>
+            <header className="nexus-hero">
                 <div className="nexus-head">
-                    <span className="nexus-mark" style={gradientText(theme)}>NEXUS</span>
-                    <span className="nexus-chip"
-                        style={{ background: theme.surfaceInset, border: `1px solid ${theme.line}`,
-                            color: theme.text3 }}>
-                        extension
-                    </span>
-                    <span className="nexus-count" style={{ color: theme.text3 }}>
-                        {molecules.length} molecule{molecules.length === 1 ? '' : 's'} in scope
+                    <span className="nexus-eyebrow"><i />NEXUS</span>
+                    <span className="nexus-hero-pill">
+                        {molecules.length.toLocaleString()} molecule{molecules.length === 1 ? '' : 's'}
                     </span>
                 </div>
-                <p className="nexus-sub" style={{ color: theme.text3 }}>
-                    Non-equilibrium exploration with cross-modal unified synthesis
-                </p>
+                <h1 className="nexus-title">
+                    {headline[0]} <span className="nexus-title-key"
+                        style={gradientText(theme)}>{headline[1]}</span>
+                </h1>
+                <p className="nexus-sub">{headline[2]}</p>
             </header>
 
             <div className="nexus-controls" style={{ borderBottom: `1px solid ${theme.line}`,
@@ -514,7 +536,7 @@ const NexusExtensionPanel: React.FC = () => {
                             style={mode === key
                                 ? { background: theme.accent, color: '#fff' }
                                 : { color: theme.text2 }}>
-                            {key === 'analyze' ? 'Analyze' : key === 'screen' ? 'Next batch'
+                            {key === 'analyze' ? 'Analyze' : key === 'screen' ? 'Batch'
                                 : key === 'predict' ? 'Predict'
                                     : key === 'shape' ? 'Shape' : 'Targets'}
                         </button>

@@ -6,7 +6,7 @@ SMILES parser (nexus.chem.smiles); downstream code reads its arrays.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, replace as _replace, field
 
 import numpy as np
 
@@ -452,10 +452,9 @@ class Molecule:
         return np.array([atomic_number(a.symbol) for a in self.atoms], dtype=np.int32)
 
     def copy(self) -> "Molecule":
-        import copy as _copy
         m = Molecule(
-            atoms=[_copy.replace(a) for a in self.atoms],
-            bonds=[_copy.replace(b) for b in self.bonds],
+            atoms=[_replace(a) for a in self.atoms],
+            bonds=[_replace(b) for b in self.bonds],
             name=self.name, smiles=self.smiles,
             coords=None if self.coords is None else self.coords.copy(),
             rings=list(self.rings),

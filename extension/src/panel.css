@@ -336,3 +336,225 @@ body {
     .nexus-enter { animation: nexus-rise 420ms cubic-bezier(.2,.7,.2,1) both; }
     @keyframes nexus-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 }
+
+/* ===================================================================== *
+ * Hero and card chrome.
+ *
+ * Matched to the Thermodynamic Waddington panel so two panels from the same
+ * author read as one family inside Mantis: an indigo hero with a gradient
+ * keyword, then near-black cards whose label rows carry the meta, then a
+ * metric strip and ranked rows in mono.
+ * ===================================================================== */
+
+:root {
+    --nx-hero-1: #141f3d;
+    --nx-hero-2: #0d1326;
+    --nx-card: #0d1017;
+    --nx-card-line: #1d2230;
+    --nx-inset: #07090f;
+    --nx-cyan: #22d3ee;
+    --nx-violet: #8f7bff;
+    --nx-pink: #f472b6;
+    --nx-ramp: linear-gradient(90deg, #22d3ee, #5b9dff 38%, #8f7bff 70%, #f472b6);
+}
+
+.nexus-hero {
+    position: relative;
+    padding: 14px 13px 13px;
+    border-bottom: 1px solid var(--nx-card-line);
+    background:
+        radial-gradient(130% 90% at 100% 0%, rgb(91 157 255 / 0.22), transparent 62%),
+        radial-gradient(90% 70% at 0% 0%, rgb(143 123 255 / 0.16), transparent 58%),
+        linear-gradient(180deg, var(--nx-hero-1), var(--nx-hero-2));
+}
+
+.nexus-hero .nexus-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 9px;
+}
+
+.nexus-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #9db4dc;
+    white-space: nowrap;
+}
+
+.nexus-eyebrow i {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--nx-cyan);
+    box-shadow: 0 0 7px rgb(34 211 238 / 0.9);
+}
+
+.nexus-hero-pill {
+    flex: 0 0 auto;
+    padding: 2px 8px;
+    border: 1px solid rgb(255 255 255 / 0.14);
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.05);
+    font-family: var(--nx-font-mono);
+    font-size: 9px;
+    color: #c6d4ee;
+    white-space: nowrap;
+}
+
+.nexus-title {
+    margin: 0;
+    font-family: var(--nx-font-display);
+    font-size: 21px;
+    font-weight: 650;
+    line-height: 1.14;
+    letter-spacing: -0.015em;
+    color: #eaf0ff;
+}
+
+.nexus-title-key { white-space: nowrap; }
+
+.nexus-hero .nexus-sub {
+    margin: 7px 0 0;
+    font-size: 10.5px;
+    line-height: 1.45;
+    color: #8da0c4;
+}
+
+/* --- Cards -------------------------------------------------------------- */
+
+.nexus-body > .nexus-stack > section,
+.nexus-card {
+    margin: 9px 9px 0;
+    padding: 10px;
+    border: 1px solid var(--nx-card-line);
+    border-radius: var(--nx-radius-panel);
+    background: var(--nx-card);
+}
+
+.nexus-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 9px;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #7f8aa6;
+}
+
+.nexus-card-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--nx-font-mono);
+    font-size: 9px;
+    letter-spacing: 0;
+    text-transform: none;
+    color: #93a1bd;
+}
+
+.nexus-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 7px;
+    border: 1px solid rgb(34 211 238 / 0.35);
+    border-radius: 999px;
+    color: var(--nx-cyan);
+}
+
+.nexus-live::before {
+    content: "";
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--nx-cyan);
+    box-shadow: 0 0 6px var(--nx-cyan);
+}
+
+/* --- Metric strip ------------------------------------------------------- */
+
+.nexus-tiles {
+    gap: 0;
+    border: 1px solid var(--nx-card-line);
+    border-radius: var(--nx-radius-panel);
+    background: var(--nx-card);
+    overflow: hidden;
+}
+
+.nexus-tiles > * {
+    padding: 9px 10px;
+    border: 0;
+    border-right: 1px solid var(--nx-card-line);
+    border-radius: 0;
+    background: transparent;
+}
+
+.nexus-tiles > *:last-child { border-right: 0; }
+
+/* --- Ranked rows -------------------------------------------------------- */
+
+.nexus-rank-bar {
+    height: 5px;
+    margin-bottom: 9px;
+    border-radius: 3px;
+    background: var(--nx-ramp);
+}
+
+.nexus-row {
+    font-variant-numeric: tabular-nums;
+}
+
+/* --- Segmented control -------------------------------------------------- */
+
+.nexus-tabs {
+    padding: 3px;
+    border-radius: 9px;
+    background: #12151d !important;
+    border-color: var(--nx-card-line) !important;
+}
+
+.nexus-tabs button {
+    border-radius: 6px;
+    padding: 5px 4px;
+    font-size: 10px;
+    font-weight: 550;
+    white-space: nowrap;
+}
+
+.nexus-controls { background: #0a0c12 !important; }
+
+.nexus-run {
+    border-radius: 9px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+/* Any block in a result stack that draws something becomes a card with a
+ * near-black plot inset, which is what gives the Waddington panel its depth.
+ * Selecting on content rather than on a class keeps this working for charts
+ * that are vendored from the workspace rather than declared here. */
+.nexus-stack > div:has(> svg),
+.nexus-stack > div:has(> div > svg) {
+    padding: 10px;
+    border: 1px solid var(--nx-card-line);
+    border-radius: var(--nx-radius-panel);
+    background: var(--nx-card);
+}
+
+.nexus-stack svg {
+    border-radius: 8px;
+    background: var(--nx-inset);
+}
+
+.nexus-stack > div:has(> svg) > svg { display: block; }

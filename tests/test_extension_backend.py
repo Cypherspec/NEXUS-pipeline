@@ -284,3 +284,21 @@ def test_enrich_reports_unmatched_rather_than_dropping_them(backend):
     assert out["unmatched"] == ["QQQNOTAGENE"]
     assert out["nStudyGenes"] == 2
     assert out["nRewritten"] == 1
+
+
+def test_backend_avoids_interpreter_features_newer_than_its_host():
+    """The backend runs on the host's interpreter, not this one.
+
+    Mantis executes the extension backend inside a container built from its
+    own image, so the Python there can be older than the one these tests run
+    on. ``copy.replace`` is 3.13+, and using it cost a working panel: every
+    call came back "Internal server error" while the tests here passed.
+    ``dataclasses.replace`` does the same job on every supported version.
+    """
+    offenders = []
+    for path in (ROOT / "nexus").rglob("*.py"):
+        text = path.read_text(encoding="utf-8")
+        for number, line in enumerate(text.splitlines(), start=1):
+            if "copy.replace(" in line:
+                offenders.append(f"{path.relative_to(ROOT)}:{number}")
+    assert not offenders, f"copy.replace is 3.13+; use dataclasses.replace: {offenders}"
