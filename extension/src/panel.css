@@ -618,3 +618,44 @@ body {
 @keyframes nexus-pulse { 0% { box-shadow: 0 0 0 0 rgb(103 232 249 / 0.45); } 100% { box-shadow: 0 0 0 8px rgb(103 232 249 / 0); } }
 @keyframes nexus-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .nexus-root { --nx-panel: #0b0d13; --nx-panel-raised: #0e1118; --nx-chrome: #0d1017; --nx-border: #1c2130; }
+
+/* ── v0.6 · Atlas layer ────────────────────────────────────────────────────
+   Dense analyst-dashboard look: deep navy, flat hairline panels, small square
+   corners, uppercase section rails, mono figures, teal accent. Replaces the
+   glow and gradients of the studio layer with restraint. */
+.nexus-root {
+    --nx-canvas: #070b14; --nx-panel: #0b1220; --nx-panel-raised: #0e1626; --nx-chrome: #0a1120;
+    --nx-border: #1a2438; --nx-foreground: #e6edf7; --nx-muted: #8391a7; --nx-accent: #2dd4bf;
+    --nx-radius-panel: 6px; --nx-radius-control: 4px;
+    background: #070b14; font-feature-settings: "tnum" 1;
+}
+.nexus-root::before { display: none; }
+.nexus-hero, .nexus-root header { background: #0a1120; border-bottom: 1px solid #1a2438; }
+.nexus-title-key, .nexus-mark { background: none; -webkit-background-clip: initial; background-clip: initial; color: #5eead4 !important; animation: none !important; }
+.nexus-eyebrow { color: #8391a7; letter-spacing: .16em; font-size: 10px; }
+.nexus-card { background: #0b1220; border: 1px solid #1a2438; border-radius: 6px; box-shadow: none; }
+.nexus-card::after { display: none; }
+.nexus-card:hover { transform: none; box-shadow: none; border-color: #26344f; }
+.nexus-card-head { font-size: 10.5px; letter-spacing: .14em; color: #c9d4e5; padding-bottom: 8px; border-bottom: 1px solid #1a2438; margin-bottom: 10px; }
+.nexus-card-meta { color: #6b7a92; letter-spacing: .02em; text-transform: none; }
+.nexus-tiles { gap: 0 !important; border: 1px solid #1a2438; border-radius: 6px; overflow: hidden; background: #0a1120; }
+.nexus-tiles > * { background: transparent !important; border: 0 !important; border-right: 1px solid #1a2438 !important; border-radius: 0 !important; box-shadow: none !important; }
+.nexus-tiles > *:last-child { border-right: 0 !important; }
+.nexus-tiles > *::before { display: none; }
+.nexus-tiles .tabular-nums, .nexus-tiles strong, .nexus-tiles b { font-family: var(--nx-font-sans); font-weight: 700; letter-spacing: -0.01em; }
+.nexus-tabs { background: #0a1120; border: 1px solid #1a2438; border-radius: 6px; padding: 3px; }
+.nexus-tabs button { border-radius: 4px; color: #8391a7; font-size: 12px; }
+.nexus-tabs button[aria-pressed="true"] { background: #13304a; color: #e6edf7; box-shadow: inset 0 0 0 1px #1f6f78; }
+.nexus-run { background: #0f2a3a; color: #5eead4; border: 1px solid #1f6f78; border-radius: 4px; box-shadow: none; font-weight: 600; letter-spacing: .02em; }
+.nexus-run::after { display: none; }
+.nexus-run:hover:not(:disabled) { background: #12384b; filter: none; }
+.nexus-chip, .nexus-hero-pill, .nexus-families button { background: #0f2a3a; color: #7fe7d6; border: 1px solid #1f6f78; border-radius: 4px; font-size: 11px; }
+.nexus-row select, .nexus-row input[type="number"] { background: #0a1120; border: 1px solid #1a2438; border-radius: 4px; }
+.nexus-live { background: #2dd4bf; animation: nexus-pulse 2.2s ease-out infinite; }
+.nexus-stack > * { animation-duration: 360ms; }
+.nexus-body table { border-collapse: collapse; }
+.nexus-body th { color: #8391a7; font-weight: 500; text-transform: uppercase; letter-spacing: .1em; font-size: 9.5px; border-bottom: 1px solid #1a2438; }
+.nexus-body td { border-bottom: 1px solid #131c2d; }
+.nexus-body tr:hover td { background: #0e1a2c; }
+.nexus-run { color: #5eead4 !important; background: #0f2a3a !important; }
+.nexus-tabs button[aria-pressed="true"] { background: #13304a !important; color: #e6edf7 !important; box-shadow: inset 0 0 0 1px #1f6f78 !important; }
