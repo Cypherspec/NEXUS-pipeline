@@ -726,3 +726,25 @@ body {
 }
 @keyframes nexus-drift { to { background-position: 220px -160px, -260px 200px, 300px 180px, -240px -220px, 280px 150px, -200px 240px, 160px -120px, -180px 140px, 0 0; } }
 @keyframes nexus-twinkle { from { opacity: .4; } to { opacity: .7; } }
+
+/* Open layout: no cards. Sections sit on the page, separated by space and a
+   hairline, so the data carries the colour and nothing else competes with it. */
+.nexus-body > .nexus-stack > section, .nexus-card,
+.nexus-stack > div:has(> svg), .nexus-stack > div:has(canvas) {
+    background: transparent !important; border: 0 !important; box-shadow: none !important;
+    border-radius: 0 !important; padding: 0 !important; margin: 0 !important;
+}
+.nexus-stack { gap: 44px !important; }
+.nexus-stack > * + * { padding-top: 28px !important; border-top: 1px solid #1b1c20 !important; }
+.nexus-stack svg { background: transparent !important; }
+.nexus-body { padding: 8px 24px 40px !important; }
+.nexus-card-head { margin-bottom: 18px !important; }
+
+/* Summary: one strip of four large figures with room around them. */
+.nexus-tiles { border: 0 !important; background: transparent !important; border-radius: 0 !important; padding: 12px 0 !important; }
+.nexus-tiles > * { border: 0 !important; background: transparent !important; padding: 0 !important; }
+.nexus-tiles .tabular-nums, .nexus-tiles strong, .nexus-tiles b { font-size: 34px !important; letter-spacing: -0.035em !important; }
+.nexus-title { font-size: 34px !important; letter-spacing: -0.035em !important; }
+.nexus-eyebrow i { background: #eeeef2 !important; box-shadow: none !important; }
+.nexus-three, .nexus-three > div, .nexus-stack canvas { border: 0 !important; background: transparent !important; }
+.nexus-tiles [style*="color"] { color: #f2f2f3 !important; }

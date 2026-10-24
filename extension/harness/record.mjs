@@ -125,7 +125,7 @@ await page.waitForTimeout(2500);
 await hold();
 
 // Next batch: active learning against the measured column.
-await page.getByRole('button', { name: 'Next batch' }).click();
+await page.getByRole('button', { name: 'Batch', exact: true }).click();
 await page.waitForTimeout(800);
 const selects = page.locator('.nexus-controls select');
 await selects.nth(1).selectOption('measured_logS').catch(() => undefined);
@@ -136,7 +136,7 @@ await page.waitForTimeout(1500);
 await hold();
 
 // Predict with conformal intervals.
-await page.getByRole('button', { name: 'Predict' }).click();
+await page.getByRole('button', { name: 'Predict', exact: true }).click();
 await page.waitForTimeout(800);
 await page.locator('.nexus-controls select').nth(1).selectOption('measured_logS').catch(() => undefined);
 await page.waitForTimeout(400);

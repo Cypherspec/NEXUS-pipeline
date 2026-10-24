@@ -54,7 +54,7 @@ await page.goto('http://127.0.0.1:8774/', { waitUntil: 'networkidle' });
 await page.waitForTimeout(1500);
 await page.locator('select').first().selectOption('map').catch(() => undefined);
 await page.waitForTimeout(500);
-await page.getByRole('button', { name: 'Targets' }).click();
+await page.getByRole('button', { name: 'Targets', exact: true }).click();
 await page.waitForTimeout(900);
 console.log('control row:', (await page.locator('.nexus-controls').innerText()).replace(/\n+/g, ' | '));
 await page.screenshot({ path: `${out}/ext_10_targets_idle.png` });
