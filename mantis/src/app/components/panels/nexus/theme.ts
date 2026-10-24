@@ -57,14 +57,14 @@ const DARK: NexusTheme = {
     // so it inherits none of the host's custom properties; copying keeps the
     // panel in step with the chrome around it, and any drift is a one-line
     // change here against src/styles/design-tokens.css.
-    bg: '#070b14',                                  // --workspace-canvas
-    surface: '#0b1220',                             // --workspace-panel
-    surfaceInset: '#0a1120',                        // --workspace-panel-raised
-    line: '#1a2438',                                // --workspace-border
-    lineStrong: '#2a3a57',                          // --workspace-border-strong
+    bg: '#0d0e10',                                  // --workspace-canvas
+    surface: '#131417',                             // --workspace-panel
+    surfaceInset: '#0f1012',                        // --workspace-panel-raised
+    line: '#222327',                                // --workspace-border
+    lineStrong: '#34363c',                          // --workspace-border-strong
     text: '#eeeef2',                                // --workspace-foreground
-    text2: '#8391a7',                               // --workspace-muted
-    text3: '#64728a',                               // between muted and border-strong
+    text2: '#9a9ca3',                               // --workspace-muted
+    text3: '#6b6e76',                               // between muted and border-strong
     grid: 'rgba(255, 255, 255, 0.06)',
     // Chrome and data marks are not the same job. Mantis's workspace tones
     // are accents for chrome, and as a categorical set on #191a1f they fail
@@ -72,17 +72,17 @@ const DARK: NexusTheme = {
     // dE 6.7 protan). Data marks therefore use a set validated against this
     // surface -- worst all-pairs CVD dE 9.4, normal-vision 20.9 -- while the
     // accent, gradient and status colours below stay Mantis's own.
-    series: ['#2dd4bf', '#f59e0b', '#60a5fa'],
+    series: ['#bfe3dc', '#d9b88a', '#9db8d9'],
     // Single hue, dim to bright on a dark surface, anchored on the azure the
     // workspace accents with.
-    ramp: ['#0d2a33', '#0f3d47', '#11585f', '#14787a', '#1fa192', '#4fd1b8', '#b3f5e6'],
-    diverging: { low: '#2dd4bf', mid: '#475569', high: '#f59e0b' },
-    accent: '#2dd4bf',                              // --workspace-accent
+    ramp: ['#24302f', '#2f4744', '#3f625d', '#5a837c', '#7fa8a0', '#acccc5', '#e6f2ef'],
+    diverging: { low: '#9fd3c9', mid: '#55585f', high: '#e0b07a' },
+    accent: '#e8e8ea',                              // --workspace-accent
     good: '#3ed68c',                                // --workspace-tone-green
     warn: '#ffb84d',                                // --workspace-tone-amber
     crit: '#ff7aa8',                                // --workspace-tone-rose
-    gradient: 'linear-gradient(90deg, #0f2a3a 0%, #12384b 100%)',
-    tooltipBg: 'rgba(10, 17, 32, 0.97)',
+    gradient: 'linear-gradient(90deg, #f2f2f3 0%, #f2f2f3 100%)',
+    tooltipBg: 'rgba(19, 20, 23, 0.97)',
 };
 
 const LIGHT: NexusTheme = {

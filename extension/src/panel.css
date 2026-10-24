@@ -659,3 +659,47 @@ body {
 .nexus-body tr:hover td { background: #0e1a2c; }
 .nexus-run { color: #5eead4 !important; background: #0f2a3a !important; }
 .nexus-tabs button[aria-pressed="true"] { background: #13304a !important; color: #e6edf7 !important; box-shadow: inset 0 0 0 1px #1f6f78 !important; }
+
+/* ── v0.7 · Mantis layer ───────────────────────────────────────────────────
+   After mantis.csail.mit.edu: near-black, neutral greys, one white primary
+   action, tight display type, small uppercase eyebrows, generous space.
+   Colour is reserved for data. */
+.nexus-root {
+    --nx-canvas: #0d0e10; --nx-panel: #131417; --nx-panel-raised: #0f1012; --nx-chrome: #131417;
+    --nx-border: #222327; --nx-foreground: #ededee; --nx-muted: #9a9ca3; --nx-accent: #e8e8ea;
+    --nx-radius-panel: 12px; --nx-radius-control: 8px;
+    background: #0d0e10; letter-spacing: -0.003em;
+}
+.nexus-root header, .nexus-hero { background: transparent; border-bottom: 0; padding-top: 28px; padding-bottom: 20px; }
+.nexus-title { font-family: var(--nx-font-sans); font-weight: 600; font-size: 30px; line-height: 1.08; letter-spacing: -0.035em; color: #f2f2f3; }
+.nexus-title-key, .nexus-mark { color: #f2f2f3 !important; }
+.nexus-title-key { color: #9a9ca3 !important; font-weight: 500; }
+.nexus-eyebrow { color: #ededee; font-weight: 600; font-size: 10px; letter-spacing: .14em; }
+.nexus-sub { color: #9a9ca3; font-size: 13px; line-height: 1.55; max-width: 60ch; }
+.nexus-live { background: #7fd1c2; width: 6px; height: 6px; }
+.nexus-hero-pill, .nexus-chip { background: transparent; color: #9a9ca3; border: 1px solid #2a2b30; border-radius: 999px; font-family: var(--nx-font-mono); font-size: 10.5px; }
+.nexus-tabs { background: transparent; border: 0; border-bottom: 1px solid #222327; border-radius: 0; padding: 0; gap: 18px; justify-content: flex-start; }
+.nexus-tabs button { background: transparent !important; color: #8b8d94 !important; border-radius: 0; padding: 10px 0; box-shadow: none !important; flex: 0 0 auto; font-size: 13px; }
+.nexus-tabs button[aria-pressed="true"] { color: #f2f2f3 !important; box-shadow: inset 0 -1.5px 0 #f2f2f3 !important; }
+.nexus-run { background: #f2f2f3 !important; color: #0d0e10 !important; border: 0; border-radius: 8px; font-weight: 500; box-shadow: none; width: auto; justify-self: start; padding: 9px 18px; }
+.nexus-run:hover:not(:disabled) { background: #ffffff !important; }
+.nexus-row select, .nexus-row input[type="number"] { background: #131417; border: 1px solid #2a2b30; border-radius: 8px; }
+.nexus-stack { gap: 20px; }
+.nexus-card { background: #131417; border: 1px solid #222327; border-radius: 12px; padding: 18px 18px 16px; }
+.nexus-card:hover { border-color: #2e3035; }
+.nexus-card-head { font-size: 10px; letter-spacing: .14em; color: #ededee; font-weight: 600; border-bottom: 0; padding-bottom: 0; margin-bottom: 14px; }
+.nexus-card-meta { color: #6b6e76; font-family: var(--nx-font-mono); font-size: 10.5px; letter-spacing: 0; }
+.nexus-tiles { border: 1px solid #222327; border-radius: 12px; background: #131417; }
+.nexus-tiles > * { border-right: 1px solid #222327 !important; padding: 16px 18px !important; }
+.nexus-tiles > * > :first-child { color: #8b8d94; font-size: 10px; letter-spacing: .12em; }
+.nexus-tiles .tabular-nums, .nexus-tiles strong, .nexus-tiles b { font-size: 26px; font-weight: 600; letter-spacing: -0.03em; color: #f2f2f3; }
+.nexus-families button { background: transparent; color: #c9cacd; border: 1px solid #2a2b30; border-radius: 999px; }
+.nexus-hint { color: #8b8d94; }
+.nexus-body th { color: #6b6e76; border-bottom-color: #222327; }
+.nexus-body td { border-bottom-color: #1b1c20; }
+.nexus-body tr:hover td { background: #17181b; }
+.nexus-tabs button[aria-pressed="true"] { background: transparent !important; }
+.nexus-tabs, .nexus-controls, .nexus-root > header, .nexus-head { background: transparent !important; }
+.nexus-controls { border-bottom: 0 !important; box-shadow: none !important; }
+.nexus-tabs { border: 0 !important; border-bottom: 1px solid #222327 !important; border-radius: 0 !important; }
+.nexus-sub { color: #9a9ca3 !important; }
