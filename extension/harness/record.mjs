@@ -75,7 +75,18 @@ const FR = process.env.FRAMES; rmSync(FR, { recursive: true, force: true }); mkd
 page.setDefaultTimeout(8000);
 let fi = 0, rec = false;
 const loop = (async () => { while (true) { if (rec) { try { await page.screenshot({ path: `${FR}/f${String(fi++).padStart(5, '0')}.jpg`, type: 'jpeg', quality: 84 }); } catch {} } else await new Promise(r => setTimeout(r, 50)); if (rec === null) break; } })();
-const hold = async () => { await page.waitForTimeout(1800); };
+const CAPS = ['NEXUS · a dependency-free drug-discovery pipeline running inside Mantis: every point is a molecule',
+ 'Analyze: scaffolds, descriptors, drug-likeness and Rule-of-5 checks for the whole map',
+ 'Chemical space in depth: the molecules in 3D principal components, shaded by drug-likeness',
+ 'Conformer: a 3D structure built from SMILES alone, validated against bond lengths and ring geometry',
+ 'Property space and distributions: logP, molecular weight and polar surface area',
+ 'Shape: persistent homology and Ricci curvature read the molecule\'s topology',
+ 'Persistence diagram: rings show up as long-lived loops',
+ 'Next batch: active learning proposes the most informative molecules to test',
+ 'Predict: conformal intervals with guaranteed coverage'];
+let ci = 0;
+const cap = async (t) => page.evaluate((t) => { let d = document.getElementById('demo-cap'); if (!d) { d = document.createElement('div'); d.id = 'demo-cap'; d.style.cssText = 'position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:2147483647;background:rgba(13,14,16,.92);color:#f2f2f3;font:500 15px Inter,system-ui,sans-serif;padding:10px 18px;border-radius:10px;border:1px solid #2a2b30;max-width:86%;text-align:center'; document.body.appendChild(d); } d.textContent = t; }, t).catch(() => {});
+const hold = async () => { await cap(CAPS[Math.min(ci++, CAPS.length - 1)]); const H = Number(process.env.HOLD || 1800); for (let t = 0; t < H; t += 1500) { await page.mouse.wheel(0, 260); await page.waitForTimeout(1500); } await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'smooth' })).catch(() => {}); await page.waitForTimeout(800); };
 try {
 await page.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(1500);
