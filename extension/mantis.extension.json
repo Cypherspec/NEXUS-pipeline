@@ -47,6 +47,7 @@
         "network": false,
         "actions": [
             "analyze",
+            "admet",
             "neighbors",
             "screen",
             "predict",

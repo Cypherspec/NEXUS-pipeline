@@ -111,6 +111,39 @@ def analyze(payload: dict, ctx: dict) -> dict:
     }
 
 
+def admet(payload: dict, ctx: dict) -> dict:
+    """ADMET screening flags per molecule, plus counts over the set.
+
+    Every endpoint is a published rule evaluated on this package's descriptors;
+    see nexus/chem/admet.py for the sources and for what each one does and does
+    not claim. Molecules are returned with their flags so the panel can rank
+    the set, and `summary` carries the aggregate the header reports.
+    """
+    from nexus.chem.admet import admet_profile, admet_summary
+
+    started = time.time()
+    mols, smiles, ids, dropped = _structures(payload)
+    if not mols:
+        raise PayloadError("no parseable molecules in the selection")
+
+    rows = []
+    for mol, text, point_id in zip(mols, smiles, ids):
+        row = {"id": point_id, "smiles": text, "formula": mol.formula()}
+        row.update(admet_profile(mol).as_dict())
+        rows.append(row)
+
+    # Worst first: a triage list is read from the top.
+    rows.sort(key=lambda r: (-r["riskFlags"], r["logSolubility"]))
+
+    return {
+        "molecules": rows,
+        "summary": admet_summary(mols),
+        "nAnalyzed": len(rows),
+        "nDropped": dropped,
+        "elapsedSeconds": round(time.time() - started, 3),
+    }
+
+
 def neighbors(payload: dict, ctx: dict) -> dict:
     """Nearest neighbours of one molecule by Tanimoto similarity.
 
@@ -618,6 +651,7 @@ def enrich(payload: dict, ctx: dict) -> dict:
 
 _ACTIONS = {
     "analyze": analyze,
+    "admet": admet,
     "neighbors": neighbors,
     "screen": screen,
     "predict": predict,

@@ -36,7 +36,7 @@ const SMILES_KEYS = ['smiles', 'SMILES', 'Smiles', 'canonical_smiles', 'structur
 /** Bag this panel writes scaffold families into, so it only clears its own. */
 const BAG_PREFIX = 'NEXUS scaffold';
 
-type Mode = 'analyze' | 'screen' | 'predict' | 'shape' | 'targets';
+type Mode = 'analyze' | 'admet' | 'screen' | 'predict' | 'shape' | 'targets';
 type Phase = 'idle' | 'running' | 'done' | 'error';
 
 interface MantisPoint {
@@ -57,6 +57,40 @@ interface AnalyzeResult {
     molecules: Molecule[];
     scaffoldFamilies: { scaffold: string; count: number; pointIds: string[] }[];
     nScaffolds: number;
+    nAnalyzed: number;
+    nDropped: number;
+    elapsedSeconds: number;
+}
+
+interface ADMETMolecule {
+    id: string;
+    smiles: string;
+    formula: string;
+    logSolubility: number;
+    solubilityClass: string;
+    absorptionEgan: boolean;
+    cnsCandidate: boolean;
+    cnsFailures: string[];
+    hergRisk: 'low' | 'moderate' | 'high';
+    toxRisk375: 'low' | 'moderate' | 'high';
+    gleesonPass: boolean;
+    bioavailabilityFailures: string[];
+    riskFlags: number;
+}
+
+interface ADMETResult {
+    molecules: ADMETMolecule[];
+    summary: {
+        n: number;
+        meanLogSolubility: number;
+        absorbedFraction: number;
+        cnsFraction: number;
+        hergHigh: number;
+        hergModerate: number;
+        toxHigh: number;
+        gleesonPassFraction: number;
+        cleanFraction: number;
+    };
     nAnalyzed: number;
     nDropped: number;
     elapsedSeconds: number;
@@ -198,6 +232,7 @@ const NexusExtensionPanel: React.FC = () => {
     const [scope, setScope] = useState<'selection' | 'map'>('selection');
 
     const [analysis, setAnalysis] = useState<AnalyzeResult | null>(null);
+    const [admet, setAdmet] = useState<ADMETResult | null>(null);
     const [batch, setBatch] = useState<ScreenResult | null>(null);
     const [prediction, setPrediction] = useState<PredictResult | null>(null);
     const [shapeResult, setShapeResult] = useState<ShapeResult | null>(null);
@@ -395,6 +430,8 @@ const NexusExtensionPanel: React.FC = () => {
                     window.mantis.backend.invoke('conformer', { smiles: first })
                         .then(setConformer).catch(() => setConformer(null));
                 }
+            } else if (mode === 'admet') {
+                setAdmet(await window.mantis.backend.invoke('admet', { molecules }));
             } else if (mode === 'screen') {
                 const result: ScreenResult = await window.mantis.backend.invoke('screen', {
                     molecules, measured, batchSize, strategy: 'ei',
@@ -498,6 +535,10 @@ const NexusExtensionPanel: React.FC = () => {
             return ['Predicts', labelColumn || 'a measured column',
                 'Conformal intervals at 90%, calibrated on the measured points'];
         }
+        if (mode === 'admet') {
+            return ['ADMET for', `${n.toLocaleString()} molecule${n === 1 ? '' : 's'}`,
+                'Published screening rules over absorption, solubility and liability'];
+        }
         if (mode === 'shape') {
             return ['Shape of', (shapeTarget ? `${shapeTarget.slice(0, 22)}…` : 'the most ring-rich molecule'),
                 'Persistent homology and Ricci curvature on one structure'];
@@ -530,13 +571,14 @@ const NexusExtensionPanel: React.FC = () => {
                 background: theme.surface }}>
                 <div className="nexus-tabs" style={{ background: theme.surfaceInset,
                     border: `1px solid ${theme.line}` }}>
-                    {(['analyze', 'screen', 'predict', 'shape', 'targets'] as const).map(key => (
+                    {(['analyze', 'admet', 'screen', 'predict', 'shape', 'targets'] as const).map(key => (
                         <button key={key} type="button" onClick={() => setMode(key)}
                             aria-pressed={mode === key}
                             style={mode === key
                                 ? { background: theme.accent, color: '#fff' }
                                 : { color: theme.text2 }}>
-                            {key === 'analyze' ? 'Analyze' : key === 'screen' ? 'Batch'
+                            {key === 'analyze' ? 'Analyze' : key === 'admet' ? 'ADMET'
+                                : key === 'screen' ? 'Batch'
                                 : key === 'predict' ? 'Predict'
                                     : key === 'shape' ? 'Shape' : 'Targets'}
                         </button>
@@ -614,6 +656,7 @@ const NexusExtensionPanel: React.FC = () => {
                         : { backgroundImage: theme.gradient, color: '#06111f' }}>
                     {phase === 'running' ? 'Working…'
                         : mode === 'analyze' ? `Analyze ${molecules.length}`
+                            : mode === 'admet' ? `Screen ${molecules.length}`
                             : mode === 'screen' ? `Propose ${batchSize} to screen`
                                 : mode === 'predict' ? 'Predict unmeasured'
                                     : mode === 'shape' ? 'Analyse shape'
@@ -635,6 +678,99 @@ const NexusExtensionPanel: React.FC = () => {
                         style={{ background: `${theme.crit}1a`, color: theme.crit,
                             border: `1px solid ${theme.crit}40` }}>
                         {error}
+                    </div>
+                )}
+
+                {mode === 'admet' && admet && (
+                    <div className="nexus-stack nexus-enter">
+                        <div className="nexus-tiles">
+                            <StatTile label="Screened" value={String(admet.nAnalyzed)}
+                                hint={admet.nDropped > 0
+                                    ? `${admet.nDropped} unreadable or over the cap`
+                                    : `in ${admet.elapsedSeconds}s`} theme={theme} />
+                            <StatTile label="No flags"
+                                value={`${(admet.summary.cleanFraction * 100).toFixed(0)}%`}
+                                tone={admet.summary.cleanFraction >= 0.7 ? 'good'
+                                    : admet.summary.cleanFraction >= 0.4 ? 'warn' : 'crit'}
+                                hint="pass every screen" theme={theme} />
+                            <StatTile label="Absorption"
+                                value={`${(admet.summary.absorbedFraction * 100).toFixed(0)}%`}
+                                hint="inside Egan's egg" theme={theme} />
+                            <StatTile label="hERG watch"
+                                value={String(admet.summary.hergHigh + admet.summary.hergModerate)}
+                                tone={admet.summary.hergHigh > 0 ? 'warn' : 'default'}
+                                hint={`${admet.summary.hergHigh} high · ${admet.summary.hergModerate} moderate`}
+                                theme={theme} />
+                        </div>
+
+                        <RuleDots theme={theme} items={[
+                            { label: 'Mostly absorbed', pass: admet.summary.absorbedFraction >= 0.8 },
+                            { label: '4/400', pass: admet.summary.gleesonPassFraction >= 0.8 },
+                            { label: '3/75 clear', pass: admet.summary.toxHigh === 0 },
+                        ]} />
+
+                        <section className="nexus-card">
+                            <div className="nexus-card-head">
+                                <span>Estimated solubility</span>
+                                <span className="nexus-card-meta">
+                                    mean log S {fmt(admet.summary.meanLogSolubility)} · mol/L
+                                </span>
+                            </div>
+                            <ViewBoundary label="Solubility" theme={theme}>
+                                <Histogram
+                                    values={admet.molecules.map(m => m.logSolubility)}
+                                    title="log S" note="ESOL form, refitted · ±1 log unit"
+                                    theme={theme} />
+                            </ViewBoundary>
+                        </section>
+
+                        <section className="nexus-card">
+                            <div className="nexus-card-head">
+                                <span>Flagged first</span>
+                                <span className="nexus-card-meta">
+                                    {admet.molecules.filter(m => m.riskFlags > 0).length} of {admet.nAnalyzed} carry a flag
+                                </span>
+                            </div>
+                            <table className="w-full table-fixed text-[10px]">
+                                <thead>
+                                    <tr>
+                                        <th className="text-left">molecule</th>
+                                        <th className="text-right">log S</th>
+                                        <th className="text-right">hERG</th>
+                                        <th className="text-right">3/75</th>
+                                        <th className="text-right">flags</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="tabular-nums">
+                                    {admet.molecules.slice(0, 24).map(m => (
+                                        <tr key={m.id || m.smiles}>
+                                            <td className="truncate" title={m.smiles}>{m.formula}</td>
+                                            <td className="text-right">{m.logSolubility.toFixed(2)}</td>
+                                            <td className="text-right"
+                                                style={{ color: m.hergRisk === 'high' ? theme.crit
+                                                    : m.hergRisk === 'moderate' ? theme.warn : theme.text3 }}>
+                                                {m.hergRisk}
+                                            </td>
+                                            <td className="text-right"
+                                                style={{ color: m.toxRisk375 === 'high' ? theme.crit
+                                                    : m.toxRisk375 === 'moderate' ? theme.warn : theme.text3 }}>
+                                                {m.toxRisk375}
+                                            </td>
+                                            <td className="text-right"
+                                                style={{ color: m.riskFlags === 0 ? theme.good : theme.text }}>
+                                                {m.riskFlags}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                            <p className="nexus-hint" style={{ color: theme.text3 }}>
+                                Published screening rules over this panel's own descriptors, not
+                                measured values or a trained model. They say where a molecule sits
+                                relative to ranges drugs have historically occupied; only solubility
+                                is quantitative, to about a log unit. Not a safety assessment.
+                            </p>
+                        </section>
                     </div>
                 )}
 
