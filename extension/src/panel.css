@@ -703,3 +703,26 @@ body {
 .nexus-controls { border-bottom: 0 !important; box-shadow: none !important; }
 .nexus-tabs { border: 0 !important; border-bottom: 1px solid #222327 !important; border-radius: 0 !important; }
 .nexus-sub { color: #9a9ca3 !important; }
+
+/* Live constellation behind the header, after the Mantis landing page: a slow
+   drift of faint points, colour kept to the data palette. */
+.nexus-root > header, .nexus-hero { position: relative; overflow: hidden; }
+.nexus-root > header::before, .nexus-hero::before {
+    content: ""; position: absolute; inset: -40% -10%; z-index: -1; pointer-events: none; opacity: .55;
+    background-image:
+        radial-gradient(1.2px 1.2px at 12% 22%, #e6f2ef 50%, transparent 51%),
+        radial-gradient(1px 1px at 28% 64%, #acccc5 50%, transparent 51%),
+        radial-gradient(1.4px 1.4px at 46% 18%, #f2f2f3 50%, transparent 51%),
+        radial-gradient(1px 1px at 63% 52%, #d9b88a 50%, transparent 51%),
+        radial-gradient(1.3px 1.3px at 78% 30%, #bfe3dc 50%, transparent 51%),
+        radial-gradient(1px 1px at 88% 70%, #9db8d9 50%, transparent 51%),
+        radial-gradient(1px 1px at 36% 40%, #6b6e76 50%, transparent 51%),
+        radial-gradient(1px 1px at 70% 84%, #6b6e76 50%, transparent 51%),
+        radial-gradient(60% 80% at 80% 20%, rgb(127 168 160 / 0.10), transparent 70%);
+    background-size: 220px 160px, 260px 200px, 300px 180px, 240px 220px, 280px 150px, 200px 240px, 160px 120px, 180px 140px, 100% 100%;
+}
+@media (prefers-reduced-motion: no-preference) {
+    .nexus-root > header::before, .nexus-hero::before { animation: nexus-drift 60s linear infinite, nexus-twinkle 6s ease-in-out infinite alternate; }
+}
+@keyframes nexus-drift { to { background-position: 220px -160px, -260px 200px, 300px 180px, -240px -220px, 280px 150px, -200px 240px, 160px -120px, -180px 140px, 0 0; } }
+@keyframes nexus-twinkle { from { opacity: .4; } to { opacity: .7; } }
