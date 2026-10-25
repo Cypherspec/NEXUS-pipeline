@@ -20,7 +20,7 @@ Each is released when the panel closes.
 
 ## Backend actions
 
-`backend/main.py` dispatches four actions into the vendored `nexus` package.
+`backend/main.py` dispatches twelve actions into the vendored `nexus` package.
 Mantis caps a backend invocation at 30 seconds, so each action bounds its own
 input and reports what it dropped rather than working an unbounded selection.
 
@@ -30,6 +30,19 @@ input and reports what it dropped rather than working an unbounded selection.
 | `neighbors` | Tanimoto nearest neighbours of one molecule |
 | `screen` | An acquisition-ranked batch, diversity-penalised |
 | `predict` | Predictions with split-conformal intervals, constant-width or adaptive |
+| `admet` | Published ADMET screening rules: solubility, absorption, CNS, hERG, 3/75, 4/400 |
+| `admet_predict` | The trained multi-task model over 18 TDC endpoints, with applicability |
+| `landscape` | Activity cliffs, landscape smoothness and diversity over the scope |
+| `region` | What distinguishes the selection from the rest of the map |
+| `conformer` | A 3D structure from SMILES by distance geometry |
+| `space3d` | The descriptor matrix on its first three principal components |
+| `shape` | Persistent homology and Ricci curvature of one molecule |
+| `enrich` | Gene Ontology over-representation for the targets in scope |
+
+`landscape` is quadratic in the number of molecules, so it bounds its scope to 400
+where the per-molecule actions allow 1,500. `admet_predict` loads a 2 MB weight file
+that ships inside the package; both it and `admet` work offline, as every action here
+does.
 
 ## Build
 

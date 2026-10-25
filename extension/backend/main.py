@@ -144,6 +144,175 @@ def admet(payload: dict, ctx: dict) -> dict:
     }
 
 
+def admet_predict(payload: dict, ctx: dict) -> dict:
+    """Predicted ADMET across eighteen measured endpoints.
+
+    Where the `admet` action applies published rules, this one runs the
+    multi-task model trained on the TDC collection: 57,884 compounds and 90,153
+    measurements, scaffold-split. Every prediction carries the endpoint's own
+    held-out accuracy and an applicability flag, because a model asked about
+    chemistry unlike its training set will answer anyway.
+    """
+    from nexus.admet.model import load_model
+    from nexus.admet.tdc import ENDPOINTS
+
+    started = time.time()
+    mols, smiles, ids, dropped = _structures(payload, limit=600)
+    if not mols:
+        raise PayloadError("no parseable molecules in the selection")
+
+    model = load_model()
+    wanted = payload.get("endpoints")
+    result = model.predict(mols, endpoints=wanted if isinstance(wanted, list) else None)
+
+    # Pivot to one record per molecule, which is what a table renders from,
+    # while keeping the per-endpoint metadata the header needs.
+    per_molecule = []
+    for i, (text, point_id) in enumerate(zip(smiles, ids)):
+        row = {"id": point_id, "smiles": text, "formula": mols[i].formula(),
+               "inDomain": bool(result["applicability"][i]),
+               "leverage": round(float(result["leverage"][i]), 3),
+               "values": {}}
+        for name, block in result["endpoints"].items():
+            if block["task"] == "classification":
+                row["values"][name] = round(float(block["probability"][i]), 4)
+            else:
+                row["values"][name] = round(float(block["value"][i]), 4)
+        per_molecule.append(row)
+
+    endpoints = {
+        name: {k: v for k, v in block.items()
+               if k not in ("probability", "value")}
+        for name, block in result["endpoints"].items()
+    }
+    for name, block in endpoints.items():
+        block["description"] = ENDPOINTS[name].description
+
+    in_domain = sum(r["inDomain"] for r in per_molecule)
+    return {
+        "molecules": per_molecule,
+        "endpoints": endpoints,
+        "nAnalyzed": len(per_molecule),
+        "nDropped": dropped,
+        "nInDomain": in_domain,
+        "trainedOn": model.n_train,
+        "elapsedSeconds": round(time.time() - started, 3),
+    }
+
+
+def landscape(payload: dict, ctx: dict) -> dict:
+    """Structure-activity landscape over the molecules in scope.
+
+    Three things a map can answer that a single molecule cannot: whether the
+    property varies smoothly with structure, which neighbouring pairs break
+    that trend (activity cliffs), and how much of the space is redundant.
+
+    When `labelColumn` carries no measured values the landscape is computed
+    over a predicted endpoint instead, named by `endpoint`; the cliffs are then
+    cliffs in the model's belief, which is still where to look first but is
+    labelled as such in the result.
+    """
+    from nexus.space.landscape import (activity_cliffs, diversity, duplicate_values,
+                                       landscape_roughness, similarity_matrix)
+
+    started = time.time()
+    # All-pairs similarity is quadratic, so the scope is bounded harder here
+    # than for the per-molecule actions.
+    mols, smiles, ids, dropped = _structures(payload, limit=400)
+    if len(mols) < 4:
+        raise PayloadError("need at least four molecules to read a landscape")
+
+    measured = payload.get("measured") or {}
+    values, keep = [], []
+    for i, point_id in enumerate(ids):
+        value = measured.get(point_id)
+        if isinstance(value, (int, float)):
+            values.append(float(value))
+            keep.append(i)
+
+    source = "measured"
+    if len(keep) < 4:
+        # Fall back to a predicted endpoint so the tab still says something
+        # useful on a map that carries no assay column.
+        from nexus.admet.model import load_model
+        endpoint = str(payload.get("endpoint") or "solubility_aqsoldb")
+        prediction = load_model().predict(mols, endpoints=[endpoint])
+        block = prediction["endpoints"].get(endpoint)
+        if block is None:
+            raise PayloadError(f"unknown endpoint {endpoint!r}")
+        values = block.get("value") or block.get("probability")
+        keep = list(range(len(mols)))
+        source = f"predicted:{endpoint}"
+
+    subset = [mols[i] for i in keep]
+    y = np.asarray(values, dtype=float)
+    S = similarity_matrix(subset)
+
+    cliffs = activity_cliffs(subset, y, similarity_min=float(payload.get("similarityMin", 0.6)),
+                             top=int(payload.get("top", 30)), sim=S)
+    duplicates = duplicate_values(subset, y, sim=S)
+
+    return {
+        "source": source,
+        "nMolecules": len(subset),
+        "nDropped": dropped,
+        "roughness": landscape_roughness(subset, y, sim=S),
+        "diversity": diversity(subset, sim=S),
+        "cliffs": [
+            {"a": ids[keep[c.i]], "b": ids[keep[c.j]],
+             "smilesA": smiles[keep[c.i]], "smilesB": smiles[keep[c.j]],
+             "similarity": round(c.similarity, 3), "delta": round(c.delta, 3),
+             "sali": round(c.sali, 2)}
+            for c in cliffs
+        ],
+        "duplicates": [
+            {"a": ids[keep[i]], "b": ids[keep[j]], "delta": round(d, 3),
+             "smiles": smiles[keep[i]]}
+            for i, j, d in duplicates[:10]
+        ],
+        "elapsedSeconds": round(time.time() - started, 3),
+    }
+
+
+def region(payload: dict, ctx: dict) -> dict:
+    """What distinguishes the selected molecules from the rest of the map.
+
+    The selection is the region; everything else in scope is the background.
+    Scaffolds and functional groups are tested one-sided hypergeometric and
+    Benjamini-Hochberg corrected, the same machinery the Targets tab uses.
+    """
+    from nexus.space.landscape import region_enrichment
+
+    started = time.time()
+    mols, smiles, ids, dropped = _structures(payload, limit=1500)
+    if not mols:
+        raise PayloadError("no parseable molecules in the selection")
+
+    selected = set(payload.get("selected") or [])
+    if not selected:
+        raise PayloadError("select points on the map to describe a region")
+    in_region = np.array([point_id in selected for point_id in ids], dtype=bool)
+    if in_region.sum() < 3:
+        raise PayloadError("the region needs at least three molecules with a structure")
+    if in_region.all():
+        raise PayloadError("the region is the whole map; select a part of it")
+
+    results = region_enrichment(mols, in_region,
+                                alpha=float(payload.get("alpha", 0.05)))
+    return {
+        "regionSize": int(in_region.sum()),
+        "backgroundSize": int((~in_region).sum()),
+        "nDropped": dropped,
+        "features": [
+            {"feature": r.feature, "kind": r.kind, "inRegion": r.in_region,
+             "inBackground": r.in_background, "fold": round(r.fold, 2),
+             "pValue": r.p_value, "qValue": r.q_value}
+            for r in results[:40]
+        ],
+        "elapsedSeconds": round(time.time() - started, 3),
+    }
+
+
 def neighbors(payload: dict, ctx: dict) -> dict:
     """Nearest neighbours of one molecule by Tanimoto similarity.
 
@@ -652,6 +821,9 @@ def enrich(payload: dict, ctx: dict) -> dict:
 _ACTIONS = {
     "analyze": analyze,
     "admet": admet,
+    "admet_predict": admet_predict,
+    "landscape": landscape,
+    "region": region,
     "neighbors": neighbors,
     "screen": screen,
     "predict": predict,

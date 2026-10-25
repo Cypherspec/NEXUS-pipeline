@@ -36,7 +36,7 @@ const SMILES_KEYS = ['smiles', 'SMILES', 'Smiles', 'canonical_smiles', 'structur
 /** Bag this panel writes scaffold families into, so it only clears its own. */
 const BAG_PREFIX = 'NEXUS scaffold';
 
-type Mode = 'analyze' | 'admet' | 'screen' | 'predict' | 'shape' | 'targets';
+type Mode = 'analyze' | 'admet' | 'space' | 'screen' | 'predict' | 'shape' | 'targets';
 type Phase = 'idle' | 'running' | 'done' | 'error';
 
 interface MantisPoint {
@@ -78,6 +78,23 @@ interface ADMETMolecule {
     riskFlags: number;
 }
 
+interface PredictedADMET {
+    molecules: {
+        id: string; smiles: string; formula: string;
+        inDomain: boolean; leverage: number;
+        values: Record<string, number>;
+    }[];
+    endpoints: Record<string, {
+        task: string; category: string; units: string; description: string;
+        higherIsBetter: boolean;
+        metrics: { roc_auc?: number; mae?: number; r2?: number; n?: number };
+        intervalHalfWidth?: number;
+    }>;
+    nAnalyzed: number;
+    nInDomain: number;
+    trainedOn: number;
+}
+
 interface ADMETResult {
     molecules: ADMETMolecule[];
     summary: {
@@ -94,6 +111,33 @@ interface ADMETResult {
     nAnalyzed: number;
     nDropped: number;
     elapsedSeconds: number;
+}
+
+interface LandscapeResult {
+    source: string;
+    nMolecules: number;
+    roughness: {
+        correlation: number; nPairs: number; nNeighbourPairs: number;
+        meanSimilarity: number; meanNeighbourDelta: number; valueRange: number;
+    };
+    diversity: {
+        n: number; meanNearestNeighbour: number;
+        redundantFraction: number; singletonFraction: number;
+    };
+    cliffs: {
+        a: string; b: string; smilesA: string; smilesB: string;
+        similarity: number; delta: number; sali: number;
+    }[];
+    duplicates: { a: string; b: string; delta: number; smiles: string }[];
+}
+
+interface RegionResult {
+    regionSize: number;
+    backgroundSize: number;
+    features: {
+        feature: string; kind: string; inRegion: number; inBackground: number;
+        fold: number; pValue: number; qValue: number;
+    }[];
 }
 
 interface ScreenResult {
@@ -233,6 +277,9 @@ const NexusExtensionPanel: React.FC = () => {
 
     const [analysis, setAnalysis] = useState<AnalyzeResult | null>(null);
     const [admet, setAdmet] = useState<ADMETResult | null>(null);
+    const [predictedAdmet, setPredictedAdmet] = useState<PredictedADMET | null>(null);
+    const [landscape, setLandscape] = useState<LandscapeResult | null>(null);
+    const [region, setRegion] = useState<RegionResult | null>(null);
     const [batch, setBatch] = useState<ScreenResult | null>(null);
     const [prediction, setPrediction] = useState<PredictResult | null>(null);
     const [shapeResult, setShapeResult] = useState<ShapeResult | null>(null);
@@ -432,6 +479,52 @@ const NexusExtensionPanel: React.FC = () => {
                 }
             } else if (mode === 'admet') {
                 setAdmet(await window.mantis.backend.invoke('admet', { molecules }));
+                // The trained model is a second, slower call: the rules above
+                // are already on screen if it fails or is not installed.
+                window.mantis.backend.invoke('admet_predict', { molecules })
+                    .then(setPredictedAdmet).catch(() => setPredictedAdmet(null));
+            } else if (mode === 'space') {
+                const measured: Record<string, number> = {};
+                if (labelColumn) {
+                    for (const point of points) {
+                        const value = point.metadata?.[labelColumn];
+                        if (typeof value === 'number') measured[point.id] = value;
+                    }
+                }
+                const result: LandscapeResult = await window.mantis.backend.invoke(
+                    'landscape', { molecules, measured });
+                setLandscape(result);
+                // Edges in the SDK are a star from one point, not a set of
+                // arbitrary pairs, so drawing every cliff would link molecules
+                // that are not actually cliff partners. The hub -- the molecule
+                // involved in the most cliffs -- is the honest thing to draw,
+                // and it is also the one worth opening first.
+                const partners = new Map<string, Set<string>>();
+                for (const c of result.cliffs) {
+                    if (!partners.has(c.a)) partners.set(c.a, new Set());
+                    if (!partners.has(c.b)) partners.set(c.b, new Set());
+                    partners.get(c.a)!.add(c.b);
+                    partners.get(c.b)!.add(c.a);
+                }
+                let hub: string | null = null;
+                for (const [id, linked] of partners) {
+                    if (!hub || linked.size > partners.get(hub)!.size) hub = id;
+                }
+                if (hub) {
+                    const linked = [...partners.get(hub)!];
+                    await window.mantis.edges.set({
+                        from: hub, to: linked, predicate: 'activity cliff with',
+                    }).catch(() => undefined);
+                    setNote(`Drew ${linked.length} cliff${linked.length === 1 ? '' : 's'} `
+                        + 'around the molecule that breaks the trend most often.');
+                }
+                // The region report only makes sense against a selection.
+                if (selectedIds.length >= 3 && selectedIds.length < molecules.length) {
+                    setRegion(await window.mantis.backend.invoke('region',
+                        { molecules, selected: selectedIds }).catch(() => null));
+                } else {
+                    setRegion(null);
+                }
             } else if (mode === 'screen') {
                 const result: ScreenResult = await window.mantis.backend.invoke('screen', {
                     molecules, measured, batchSize, strategy: 'ei',
@@ -539,6 +632,10 @@ const NexusExtensionPanel: React.FC = () => {
             return ['ADMET for', `${n.toLocaleString()} molecule${n === 1 ? '' : 's'}`,
                 'Published screening rules over absorption, solubility and liability'];
         }
+        if (mode === 'space') {
+            return ['Landscape of', `${n.toLocaleString()} molecule${n === 1 ? '' : 's'}`,
+                'Where structure predicts behaviour, and where it stops'];
+        }
         if (mode === 'shape') {
             return ['Shape of', (shapeTarget ? `${shapeTarget.slice(0, 22)}…` : 'the most ring-rich molecule'),
                 'Persistent homology and Ricci curvature on one structure'];
@@ -571,13 +668,14 @@ const NexusExtensionPanel: React.FC = () => {
                 background: theme.surface }}>
                 <div className="nexus-tabs" style={{ background: theme.surfaceInset,
                     border: `1px solid ${theme.line}` }}>
-                    {(['analyze', 'admet', 'screen', 'predict', 'shape', 'targets'] as const).map(key => (
+                    {(['analyze', 'admet', 'space', 'screen', 'predict', 'shape', 'targets'] as const).map(key => (
                         <button key={key} type="button" onClick={() => setMode(key)}
                             aria-pressed={mode === key}
                             style={mode === key
                                 ? { background: theme.accent, color: '#fff' }
                                 : { color: theme.text2 }}>
                             {key === 'analyze' ? 'Analyze' : key === 'admet' ? 'ADMET'
+                                : key === 'space' ? 'Space'
                                 : key === 'screen' ? 'Batch'
                                 : key === 'predict' ? 'Predict'
                                     : key === 'shape' ? 'Shape' : 'Targets'}
@@ -594,7 +692,7 @@ const NexusExtensionPanel: React.FC = () => {
                     </select>
                 </div>
 
-                {(mode === 'screen' || mode === 'predict') && (
+                {(mode === 'screen' || mode === 'predict' || mode === 'space') && (
                     <div className="nexus-row">
                         <label style={{ color: theme.text3 }}>Measured</label>
                         <select value={labelColumn} onChange={e => setLabelColumn(e.target.value)}
@@ -657,6 +755,7 @@ const NexusExtensionPanel: React.FC = () => {
                     {phase === 'running' ? 'Working…'
                         : mode === 'analyze' ? `Analyze ${molecules.length}`
                             : mode === 'admet' ? `Screen ${molecules.length}`
+                            : mode === 'space' ? `Read ${molecules.length} as a landscape`
                             : mode === 'screen' ? `Propose ${batchSize} to screen`
                                 : mode === 'predict' ? 'Predict unmeasured'
                                     : mode === 'shape' ? 'Analyse shape'
@@ -724,6 +823,72 @@ const NexusExtensionPanel: React.FC = () => {
                             </ViewBoundary>
                         </section>
 
+                        {predictedAdmet && (
+                            <section className="nexus-card">
+                                <div className="nexus-card-head">
+                                    <span>Predicted endpoints</span>
+                                    <span className="nexus-card-meta">
+                                        {predictedAdmet.nInDomain}/{predictedAdmet.nAnalyzed} in domain ·
+                                        trained on {predictedAdmet.trainedOn.toLocaleString()}
+                                    </span>
+                                </div>
+                                <table className="w-full table-fixed text-[10px]">
+                                    <thead>
+                                        <tr>
+                                            <th className="text-left">endpoint</th>
+                                            <th className="text-left">what</th>
+                                            <th className="text-right">mean</th>
+                                            <th className="text-right">held-out</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="tabular-nums">
+                                        {Object.entries(predictedAdmet.endpoints).map(([name, meta]) => {
+                                            const values = predictedAdmet.molecules
+                                                .map(m => m.values[name])
+                                                .filter(v => typeof v === 'number');
+                                            if (!values.length) return null;
+                                            const mean = values.reduce((a, b) => a + b, 0) / values.length;
+                                            const score = meta.task === 'classification'
+                                                ? `AUC ${(meta.metrics.roc_auc ?? 0).toFixed(2)}`
+                                                : `MAE ${(meta.metrics.mae ?? 0).toFixed(2)}`;
+                                            // A high probability is bad news on the
+                                            // endpoints where a hit is a liability.
+                                            const concerning = meta.task === 'classification'
+                                                && !meta.higherIsBetter && mean >= 0.5;
+                                            return (
+                                                <tr key={name}>
+                                                    <td className="truncate" title={meta.description}>
+                                                        {name.split('_')[0]}
+                                                    </td>
+                                                    <td className="truncate"
+                                                        style={{ color: theme.text3 }}>
+                                                        {meta.category}
+                                                    </td>
+                                                    <td className="text-right"
+                                                        style={{ color: concerning ? theme.warn : theme.text }}>
+                                                        {meta.task === 'classification'
+                                                            ? `${(mean * 100).toFixed(0)}%`
+                                                            : fmt(mean)}
+                                                    </td>
+                                                    <td className="text-right"
+                                                        style={{ color: theme.text3 }}>{score}</td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                                <p className="nexus-hint" style={{ color: theme.text3 }}>
+                                    A multi-task model over eighteen measured TDC endpoints,
+                                    scaffold-split. Classification columns are the mean
+                                    predicted probability across the set; regression columns
+                                    are the mean predicted value in the endpoint's own units.
+                                    Each row carries its own held-out score, and the header
+                                    says how many molecules fall inside the training
+                                    distribution; outside it, a prediction is extrapolation.
+                                </p>
+                            </section>
+                        )}
+
                         <section className="nexus-card">
                             <div className="nexus-card-head">
                                 <span>Flagged first</span>
@@ -771,6 +936,124 @@ const NexusExtensionPanel: React.FC = () => {
                                 is quantitative, to about a log unit. Not a safety assessment.
                             </p>
                         </section>
+                    </div>
+                )}
+
+                {mode === 'space' && landscape && (
+                    <div className="nexus-stack nexus-enter">
+                        <div className="nexus-tiles">
+                            <StatTile label="Molecules" value={String(landscape.nMolecules)}
+                                hint={landscape.source.startsWith('predicted')
+                                    ? `on ${landscape.source.split(':')[1]} (predicted)`
+                                    : 'on the measured column'} theme={theme} />
+                            <StatTile label="Smoothness"
+                                value={Number.isFinite(landscape.roughness.correlation)
+                                    ? fmt(landscape.roughness.correlation) : '-'}
+                                tone={landscape.roughness.correlation >= 0.3 ? 'good'
+                                    : landscape.roughness.correlation >= 0.15 ? 'warn' : 'crit'}
+                                hint="similarity vs value agreement" theme={theme} />
+                            <StatTile label="Cliffs" value={String(landscape.cliffs.length)}
+                                hint={`of ${landscape.roughness.nNeighbourPairs} neighbour pairs`}
+                                theme={theme} />
+                            <StatTile label="Redundant"
+                                value={`${(landscape.diversity.redundantFraction * 100).toFixed(0)}%`}
+                                tone={landscape.diversity.redundantFraction > 0.4 ? 'warn' : 'default'}
+                                hint="a near-twin in the set" theme={theme} />
+                        </div>
+
+                        <p className="nexus-hint" style={{ color: theme.text3 }}>
+                            Smoothness is how far structural similarity predicts similar
+                            behaviour across all {landscape.roughness.nPairs.toLocaleString()} pairs.
+                            Low means neighbours on the map tell you little, and the
+                            cliffs below are where the information sits.
+                        </p>
+
+                        <section className="nexus-card">
+                            <div className="nexus-card-head">
+                                <span>Activity cliffs</span>
+                                <span className="nexus-card-meta">
+                                    similar structure, different behaviour
+                                </span>
+                            </div>
+                            {landscape.cliffs.length === 0 ? (
+                                <p className="nexus-hint" style={{ color: theme.text3 }}>
+                                    No pair is both close enough and different enough to
+                                    count as a cliff here.
+                                </p>
+                            ) : (
+                                <table className="w-full table-fixed text-[10px]">
+                                    <thead>
+                                        <tr>
+                                            <th className="text-left">pair</th>
+                                            <th className="text-right">sim</th>
+                                            <th className="text-right">delta</th>
+                                            <th className="text-right">SALI</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="tabular-nums">
+                                        {landscape.cliffs.slice(0, 16).map((c, i) => (
+                                            <tr key={`${c.a}-${c.b}-${i}`}>
+                                                <td className="truncate"
+                                                    title={`${c.smilesA}\n${c.smilesB}`}>
+                                                    {c.smilesA.slice(0, 18)} / {c.smilesB.slice(0, 18)}
+                                                </td>
+                                                <td className="text-right">{c.similarity.toFixed(2)}</td>
+                                                <td className="text-right">{fmt(c.delta)}</td>
+                                                <td className="text-right"
+                                                    style={{ color: theme.series[0] }}>
+                                                    {c.sali.toFixed(1)}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </section>
+
+                        {landscape.duplicates.length > 0 && (
+                            <section className="nexus-card">
+                                <div className="nexus-card-head">
+                                    <span>Same structure, different value</span>
+                                    <span className="nexus-card-meta">
+                                        {landscape.duplicates.length} pair{landscape.duplicates.length === 1 ? '' : 's'}
+                                    </span>
+                                </div>
+                                <p className="nexus-hint" style={{ color: theme.text3 }}>
+                                    These are identical to the fingerprint, which ignores
+                                    stereochemistry. Either the map holds a duplicate, or
+                                    the pair are stereoisomers that the assay separated and
+                                    the descriptor cannot. Largest gap{' '}
+                                    {fmt(landscape.duplicates[0].delta)}.
+                                </p>
+                            </section>
+                        )}
+
+                        {region && region.features.length > 0 && (
+                            <section className="nexus-card">
+                                <div className="nexus-card-head">
+                                    <span>What defines the selection</span>
+                                    <span className="nexus-card-meta">
+                                        {region.regionSize} selected vs {region.backgroundSize} others
+                                    </span>
+                                </div>
+                                <RankedBars theme={theme} title="Fold enrichment"
+                                    note="hypergeometric, BH-corrected at FDR 0.05"
+                                    valueFormat={v => `${v.toFixed(1)}x`}
+                                    items={region.features.slice(0, 10).map(f => ({
+                                        label: f.feature.length > 22
+                                            ? `${f.feature.slice(0, 22)}…` : f.feature,
+                                        value: f.fold,
+                                        sublabel: `${f.kind} · ${f.inRegion}/${f.inRegion + f.inBackground} · q=${f.qValue.toExponential(1)}`,
+                                    }))} />
+                            </section>
+                        )}
+
+                        {region === null && selectedIds.length < 3 && (
+                            <p className="nexus-hint" style={{ color: theme.text3 }}>
+                                Select a cluster on the map and run this again to see what
+                                distinguishes it from the rest.
+                            </p>
+                        )}
                     </div>
                 )}
 

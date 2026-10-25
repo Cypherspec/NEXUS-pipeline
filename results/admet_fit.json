@@ -1,0 +1,569 @@
+{
+  "n_compounds": 57884,
+  "n_measurements": 90153,
+  "n_endpoints": 18,
+  "split": "scaffold over the pooled union (80/10/10)",
+  "n_train": 46307,
+  "n_valid": 5788,
+  "n_test": 5789,
+  "epochs": 120,
+  "hidden": [
+    256,
+    128
+  ],
+  "features": 3096,
+  "alpha": 0.1,
+  "leverage_threshold": 184.63388216042102,
+  "weights_bytes": 2189931,
+  "seconds": 559.8,
+  "endpoints": {
+    "caco2_wang": {
+      "category": "absorption",
+      "task": "regression",
+      "units": "log cm/s",
+      "n_test": 111,
+      "model": {
+        "mae": 0.37804899080311744,
+        "rmse": 0.49423552250720915,
+        "r2": 0.5143244605483701,
+        "n": 111
+      },
+      "baseline_mean": {
+        "mae": 0.5743662336878484,
+        "rmse": 0.710556506537307,
+        "r2": -0.0038655703053700474,
+        "n": 111
+      },
+      "conformal": {
+        "half_width": 0.7236865358060793,
+        "empirical_coverage": 0.8288288288288288,
+        "target_coverage": 0.9
+      },
+      "baseline_linear": {
+        "mae": 0.44500723614275717,
+        "rmse": 0.5913330431596467,
+        "r2": 0.3047474130000577,
+        "n": 111
+      },
+      "network_only": {
+        "mae": 0.3875216140177896,
+        "rmse": 0.5138837362514195,
+        "r2": 0.4749410517328936,
+        "n": 111
+      },
+      "blend_weight": 0.7000000000000001
+    },
+    "hia_hou": {
+      "category": "absorption",
+      "task": "classification",
+      "units": "fraction absorbed > 30%",
+      "n_test": 78,
+      "model": {
+        "roc_auc": 0.9839285714285714,
+        "pr_auc": 0.9981093052612847,
+        "n": 78
+      },
+      "baseline_majority": {
+        "roc_auc": 0.5,
+        "n": 78
+      },
+      "baseline_linear": {
+        "roc_auc": 0.9696428571428571,
+        "pr_auc": 0.9964790766410342,
+        "n": 78
+      },
+      "network_only": {
+        "roc_auc": 0.9696428571428571,
+        "pr_auc": 0.9963975522172388,
+        "n": 78
+      },
+      "blend_weight": 0.2
+    },
+    "pgp_broccatelli": {
+      "category": "absorption",
+      "task": "classification",
+      "units": "inhibitor",
+      "n_test": 152,
+      "model": {
+        "roc_auc": 0.9587461718609259,
+        "pr_auc": 0.9764900454097072,
+        "n": 152
+      },
+      "baseline_majority": {
+        "roc_auc": 0.5,
+        "n": 152
+      },
+      "baseline_linear": {
+        "roc_auc": 0.934606377229328,
+        "pr_auc": 0.9625434029973808,
+        "n": 152
+      },
+      "network_only": {
+        "roc_auc": 0.9589263195820573,
+        "pr_auc": 0.9765092220291474,
+        "n": 152
+      },
+      "blend_weight": 0.8
+    },
+    "bioavailability_ma": {
+      "category": "absorption",
+      "task": "classification",
+      "units": "F > 20%",
+      "n_test": 78,
+      "model": {
+        "roc_auc": 0.6761904761904762,
+        "pr_auc": 0.9029319037792016,
+        "n": 78
+      },
+      "baseline_majority": {
+        "roc_auc": 0.5,
+        "n": 78
+      },
+      "baseline_linear": {
+        "roc_auc": 0.7343915343915344,
+        "pr_auc": 0.876783918007323,
+        "n": 78
+      },
+      "network_only": {
+        "roc_auc": 0.7619047619047619,
+        "pr_auc": 0.9105603392687147,
+        "n": 78
+      },
+      "blend_weight": 0.8
+    },
+    "solubility_aqsoldb": {
+      "category": "absorption",
+      "task": "regression",
+      "units": "log mol/L",
+      "n_test": 575,
+      "model": {
+        "mae": 0.9823678811913262,
+        "rmse": 1.2578699432499787,
+        "r2": 0.7472324264524619,
+        "n": 575
+      },
+      "baseline_mean": {
+        "mae": 2.2253989117637283,
+        "rmse": 2.816804112360038,
+        "r2": -0.2675443741796084,
+        "n": 575
+      },
+      "conformal": {
+        "half_width": 1.8564527234816106,
+        "empirical_coverage": 0.8765217391304347,
+        "target_coverage": 0.9
+      },
+      "baseline_linear": {
+        "mae": 1.3781084946759936,
+        "rmse": 1.9359553881433715,
+        "r2": 0.40125683271933243,
+        "n": 575
+      },
+      "network_only": {
+        "mae": 1.0086112951123494,
+        "rmse": 1.2766952174017279,
+        "r2": 0.7396099752939894,
+        "n": 575
+      },
+      "blend_weight": 0.8
+    },
+    "lipophilicity_az": {
+      "category": "absorption",
+      "task": "regression",
+      "units": "logD 7.4",
+      "n_test": 457,
+      "model": {
+        "mae": 0.54559629060658,
+        "rmse": 0.7217458274710894,
+        "r2": 0.6515284340305885,
+        "n": 457
+      },
+      "baseline_mean": {
+        "mae": 1.0069761374018404,
+        "rmse": 1.2257705261525689,
+        "r2": -0.005118189106721793,
+        "n": 457
+      },
+      "conformal": {
+        "half_width": 1.2784176099476714,
+        "empirical_coverage": 0.9234135667396062,
+        "target_coverage": 0.9
+      },
+      "baseline_linear": {
+        "mae": 0.6527931783027356,
+        "rmse": 0.8807195036559236,
+        "r2": 0.4811115410718062,
+        "n": 457
+      },
+      "network_only": {
+        "mae": 0.6005198691756125,
+        "rmse": 0.7880633145472266,
+        "r2": 0.5845478553225383,
+        "n": 457
+      },
+      "blend_weight": 0.7000000000000001
+    },
+    "bbb_martins": {
+      "category": "distribution",
+      "task": "classification",
+      "units": "penetrant",
+      "n_test": 191,
+      "model": {
+        "roc_auc": 0.8850267379679144,
+        "pr_auc": 0.9370551228642698,
+        "n": 191
+      },
+      "baseline_majority": {
+        "roc_auc": 0.5,
+        "n": 191
+      },
+      "baseline_linear": {
+        "roc_auc": 0.8264705882352941,
+        "pr_auc": 0.8909742340204853,
+        "n": 191
+      },
+      "network_only": {
+        "roc_auc": 0.8839572192513369,
+        "pr_auc": 0.9332994379497522,
+        "n": 191
+      },
+      "blend_weight": 0.5
+    },
+    "ppbr_az": {
+      "category": "distribution",
+      "task": "regression",
+      "units": "% bound",
+      "n_test": 211,
+      "model": {
+        "mae": 9.004229261742044,
+        "rmse": 13.765171189269875,
+        "r2": 0.39674977958266544,
+        "n": 211
+      },
+      "baseline_mean": {
+        "mae": 12.851360242038442,
+        "rmse": 17.757760698976096,
+        "r2": -0.003946694204800982,
+        "n": 211
+      },
+      "conformal": {
+        "half_width": 20.961775544232523,
+        "empirical_coverage": 0.8767772511848341,
+        "target_coverage": 0.9
+      },
+      "baseline_linear": {
+        "mae": 15.218645503576864,
+        "rmse": 19.97031958905246,
+        "r2": -0.26970925636228293,
+        "n": 211
+      },
+      "network_only": {
+        "mae": 8.861425949033519,
+        "rmse": 13.768868895364088,
+        "r2": 0.396425636629149,
+        "n": 211
+      },
+      "blend_weight": 0.9
+    },
+    "vdss_lombardo": {
+      "category": "distribution",
+      "task": "regression",
+      "units": "log L/kg",
+      "n_test": 123,
+      "model": {
+        "mae": 0.37471093926951377,
+        "rmse": 0.4991278034461225,
+        "r2": 0.5571716993133908,
+        "n": 123
+      },
+      "baseline_mean": {
+        "mae": 0.6282030041660983,
+        "rmse": 0.7503147717348067,
+        "r2": -0.0006883337061658334,
+        "n": 123
+      },
+      "conformal": {
+        "half_width": 0.807714978527701,
+        "empirical_coverage": 0.8536585365853658,
+        "target_coverage": 0.9
+      },
+      "baseline_linear": {
+        "mae": 0.5068155769871222,
+        "rmse": 0.6830426591188025,
+        "r2": 0.17070795434786767,
+        "n": 123
+      },
+      "network_only": {
+        "mae": 0.37281007868188315,
+        "rmse": 0.49022021845513225,
+        "r2": 0.5728363569685536,
+        "n": 123
+      },
+      "blend_weight": 0.7000000000000001
+    },
+    "cyp2c9_veith": {
+      "category": "metabolism",
+      "task": "classification",
+      "units": "inhibitor",
+      "n_test": 1346,
+      "model": {
+        "roc_auc": 0.8575380457468711,
+        "pr_auc": 0.7639688475768107,
+        "n": 1346
+      },
+      "baseline_majority": {
+        "roc_auc": 0.5,
+        "n": 1346
+      },
+      "baseline_linear": {
+        "roc_auc": 0.8189581372972131,
+        "pr_auc": 0.7184023184689098,
+        "n": 1346
+      },
+      "network_only": {
+        "roc_auc": 0.8528779871188056,
+        "pr_auc": 0.7396055624481488,
+        "n": 1346
+      },
+      "blend_weight": 0.30000000000000004
+    },
+    "cyp2d6_veith": {
+      "category": "metabolism",
+      "task": "classification",
+      "units": "inhibitor",
+      "n_test": 1498,
+      "model": {
+        "roc_auc": 0.8476384891113408,
+        "pr_auc": 0.6705288141374772,
+        "n": 1498
+      },
+      "baseline_majority": {
+        "roc_auc": 0.5,
+        "n": 1498
+      },
+      "baseline_linear": {
+        "roc_auc": 0.8257757582487039,
+        "pr_auc": 0.6230057785077301,
+        "n": 1498
+      },
+      "network_only": {
+        "roc_auc": 0.8328678356779041,
+        "pr_auc": 0.6194066562647776,
+        "n": 1498
+      },
+      "blend_weight": 0.2
+    },
+    "cyp3a4_veith": {
+      "category": "metabolism",
+      "task": "classification",
+      "units": "inhibitor",
+      "n_test": 1395,
+      "model": {
+        "roc_auc": 0.8689318358574666,
+        "pr_auc": 0.8155228285100655,
+        "n": 1395
+      },
+      "baseline_majority": {
+        "roc_auc": 0.5,
+        "n": 1395
+      },
+      "baseline_linear": {
+        "roc_auc": 0.8476613786701679,
+        "pr_auc": 0.7732686200638095,
+        "n": 1395
+      },
+      "network_only": {
+        "roc_auc": 0.850013380275801,
+        "pr_auc": 0.7994465145520594,
+        "n": 1395
+      },
+      "blend_weight": 0.30000000000000004
+    },
+    "half_life_obach": {
+      "category": "excretion",
+      "task": "regression",
+      "units": "log hours",
+      "n_test": 87,
+      "model": {
+        "mae": 0.4150214770271906,
+        "rmse": 0.5647359773013598,
+        "r2": 0.1757351916482741,
+        "n": 87
+      },
+      "baseline_mean": {
+        "mae": 0.5237942924134604,
+        "rmse": 0.6475323895928957,
+        "r2": -0.08367446420659941,
+        "n": 87
+      },
+      "conformal": {
+        "half_width": 1.0275454251156662,
+        "empirical_coverage": 0.9080459770114943,
+        "target_coverage": 0.9
+      },
+      "baseline_linear": {
+        "mae": 0.5182810834191025,
+        "rmse": 0.6808844939461351,
+        "r2": -0.19818184316001752,
+        "n": 87
+      },
+      "network_only": {
+        "mae": 0.4201559665896174,
+        "rmse": 0.5724043612989647,
+        "r2": 0.1531983130949911,
+        "n": 87
+      },
+      "blend_weight": 0.9
+    },
+    "clearance_hepatocyte_az": {
+      "category": "excretion",
+      "task": "regression",
+      "units": "log uL/min/10^6 cells",
+      "n_test": 112,
+      "model": {
+        "mae": 0.3860388240968398,
+        "rmse": 0.47840631020468555,
+        "r2": 0.27515090175257695,
+        "n": 112
+      },
+      "baseline_mean": {
+        "mae": 0.4792535724811523,
+        "rmse": 0.5647667609714031,
+        "r2": -0.010164405428780388,
+        "n": 112
+      },
+      "conformal": {
+        "half_width": 0.8769955279321453,
+        "empirical_coverage": 0.9196428571428571,
+        "target_coverage": 0.9
+      },
+      "baseline_linear": {
+        "mae": 0.5281005343454296,
+        "rmse": 0.6523274735080234,
+        "r2": -0.34767491165200726,
+        "n": 112
+      },
+      "network_only": {
+        "mae": 0.3860388240968398,
+        "rmse": 0.47840631020468555,
+        "r2": 0.27515090175257695,
+        "n": 112
+      },
+      "blend_weight": 1.0
+    },
+    "herg_karim": {
+      "category": "toxicity",
+      "task": "classification",
+      "units": "blocker",
+      "n_test": 1621,
+      "model": {
+        "roc_auc": 0.8691137336572949,
+        "pr_auc": 0.8720527233893189,
+        "n": 1621
+      },
+      "baseline_majority": {
+        "roc_auc": 0.5,
+        "n": 1621
+      },
+      "baseline_linear": {
+        "roc_auc": 0.8382437567365133,
+        "pr_auc": 0.8152300917197443,
+        "n": 1621
+      },
+      "network_only": {
+        "roc_auc": 0.853294725880999,
+        "pr_auc": 0.8603005620872473,
+        "n": 1621
+      },
+      "blend_weight": 0.30000000000000004
+    },
+    "ames": {
+      "category": "toxicity",
+      "task": "classification",
+      "units": "mutagenic",
+      "n_test": 592,
+      "model": {
+        "roc_auc": 0.8491836734693877,
+        "pr_auc": 0.9156455999988571,
+        "n": 592
+      },
+      "baseline_majority": {
+        "roc_auc": 0.5,
+        "n": 592
+      },
+      "baseline_linear": {
+        "roc_auc": 0.8115943877551021,
+        "pr_auc": 0.8814006571687885,
+        "n": 592
+      },
+      "network_only": {
+        "roc_auc": 0.8410331632653061,
+        "pr_auc": 0.9093532007915902,
+        "n": 592
+      },
+      "blend_weight": 0.5
+    },
+    "dili": {
+      "category": "toxicity",
+      "task": "classification",
+      "units": "injury",
+      "n_test": 64,
+      "model": {
+        "roc_auc": 0.8817733990147784,
+        "pr_auc": 0.9220190518676628,
+        "n": 64
+      },
+      "baseline_majority": {
+        "roc_auc": 0.5,
+        "n": 64
+      },
+      "baseline_linear": {
+        "roc_auc": 0.8492610837438423,
+        "pr_auc": 0.8918020285406693,
+        "n": 64
+      },
+      "network_only": {
+        "roc_auc": 0.9044334975369458,
+        "pr_auc": 0.9404642474820085,
+        "n": 64
+      },
+      "blend_weight": 0.1
+    },
+    "ld50_zhu": {
+      "category": "toxicity",
+      "task": "regression",
+      "units": "-log10(mol/kg)",
+      "n_test": 483,
+      "model": {
+        "mae": 0.5757829225896772,
+        "rmse": 0.7669482211010417,
+        "r2": 0.4369222819459283,
+        "n": 483
+      },
+      "baseline_mean": {
+        "mae": 0.8126506497511123,
+        "rmse": 1.0611783047597365,
+        "r2": -0.07798564583494882,
+        "n": 483
+      },
+      "conformal": {
+        "half_width": 1.1413981759355014,
+        "empirical_coverage": 0.8757763975155279,
+        "target_coverage": 0.9
+      },
+      "baseline_linear": {
+        "mae": 0.7535731237388898,
+        "rmse": 0.9773189069877439,
+        "r2": 0.08565761089758983,
+        "n": 483
+      },
+      "network_only": {
+        "mae": 0.5893187333443756,
+        "rmse": 0.7875984813572823,
+        "r2": 0.40619206994869095,
+        "n": 483
+      },
+      "blend_weight": 0.8
+    }
+  }
+}

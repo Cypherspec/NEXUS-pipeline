@@ -31,6 +31,8 @@ including the unflattering ones, are in [`results/`](results/) and summarized be
 | Free energy | Harmonic oscillator with exact ΔF = 0.6931 | **BAR 0.6957**, Crooks 0.6899, Jarzynski 0.6979 |
 | Active learning | Retrospective screen of 8,000 HIV compounds | **3.16× enrichment** over random (random control: 1.01×) |
 | Gene Ontology | Enrichment and semantic similarity | 4/5 positive controls recovered at rank 1; random sets → 0.28 false terms; similarity AUC 0.885 |
+| ADMET model | 18 TDC endpoints, 57,884 compounds, scaffold split | mean held-out **ROC-AUC 0.868** (10 endpoints), **R² 0.469** (8); every endpoint beats its trivial baseline and the linear comparator |
+| Activity cliffs | Count fingerprints vs binary on a homologous series | binary ECFP scores C2/C16 alcohols at Tanimoto **1.00**; MinMax on counts separates them |
 
 ## Results
 
@@ -140,6 +142,8 @@ nexus/
   al/          Gaussian processes, acquisition functions, SVGD, screening loop
   physics/     Jarzynski, Crooks, BAR, Langevin switching simulations
   bio/         Gene Ontology DAG, semantic similarity, enrichment analysis
+  admet/       TDC endpoint loaders, featurisation, the multi-task ADMET model
+  space/       structure-activity landscapes: cliffs, regions, diversity
 benchmarks/    every validation and benchmark script
 tests/         268 tests
 results/       measured outputs, committed
@@ -158,6 +162,70 @@ python -m benchmarks.report                     # aggregate into tables
 python -m benchmarks.generate                   # train and evaluate the generator
 ```
 
+## ADMET
+
+Eighteen endpoints from [Therapeutics Data Commons](https://tdcommons.ai), spanning
+absorption, distribution, metabolism, excretion and toxicity: **91,539 measurements over
+57,884 unique compounds**. Two layers sit on top of them.
+
+**Published rules** (`nexus/chem/admet.py`) — ESOL solubility, Egan's absorption egg,
+CNS ranges, Aronov's hERG pair, Pfizer 3/75 and Gleeson 4/400. Closed-form and traceable
+to a citation; no training involved. Two corrections were needed to make them behave:
+Delaney's published ESOL coefficients assume his clogP and carry a +0.98 log-unit bias
+against this package's, so the form is kept and the coefficients refitted
+(`benchmarks/fit_esol.py`); and this package's logP is fitted to logD 7.4, which reads
+one to two units low for a basic amine, so the hERG rule converts to the neutral scale
+before applying its cut-off — without that it under-flags the compounds it exists for.
+
+**A multi-task model** (`nexus/admet/model.py`) — one trunk, eighteen heads, trained on
+all of it at once so that DILI's 475 rows can borrow structure-activity signal from
+CYP2D6's 13,130. Trained by `benchmarks/train_admet.py` under a single scaffold split
+taken over the pooled union, so a scaffold in the training set appears in no endpoint's
+test set. Each endpoint is reported against two comparators: the trivial baseline, and a
+ridge model on the same features and the same split. Predictions carry a Platt-calibrated
+probability or a split-conformal interval, and a leverage-based applicability flag that
+says when the model is extrapolating. Held out on the scaffold split: mean **ROC-AUC 0.868** across the ten classification
+endpoints and mean **R² 0.469** across the eight regression ones. Per endpoint:
+
+| Endpoint | n test | Model | Ridge on same features | Trivial |
+|---|---|---|---|---|
+| hia_hou | 78 | **0.984** | 0.970 | 0.500 |
+| pgp_broccatelli | 152 | **0.959** | 0.935 | 0.500 |
+| bbb_martins | 191 | **0.885** | 0.826 | 0.500 |
+| dili | 64 | **0.882** | 0.849 | 0.500 |
+| cyp3a4_veith | 1,395 | **0.869** | 0.848 | 0.500 |
+| herg_karim | 1,621 | **0.869** | 0.838 | 0.500 |
+| cyp2c9_veith | 1,346 | **0.858** | 0.819 | 0.500 |
+| ames | 592 | **0.849** | 0.812 | 0.500 |
+| cyp2d6_veith | 1,498 | **0.848** | 0.826 | 0.500 |
+| bioavailability_ma | 78 | **0.676** | 0.734 | 0.500 |
+
+(ROC-AUC; regression endpoints and their MAEs are in `results/admet_fit.json`.)
+
+The first version of this model scored 0.730 mean ROC-AUC and **lost to the ridge
+comparator on nearly every endpoint** — DILI 0.389 against 0.849, below chance. Its
+training loss had fallen to 0.059: it had memorised. Early stopping on a validation
+split, a per-endpoint balanced loss so the three CYP sets (37k rows between them) cannot
+steer the shared trunk away from DILI's 475, weight decay, and a per-endpoint blend with
+the ridge model chosen on validation are what closed the gap. The comparator column
+stays in the table because a model that cannot beat a linear fit on the same features has
+not earned its complexity.
+
+## Molecular spaces
+
+A map of molecules supports questions a single molecule does not (`nexus/space/`):
+
+- **Activity cliffs** — pairs that are structurally close but behave differently, ranked
+  by SALI. Computed on *count* fingerprints with MinMax similarity, because binary ECFP
+  saturates along a homologous series and scores hexanol against hexadecanol at exactly
+  1.00, which makes chain extensions look like the strongest cliffs in the set.
+- **Landscape smoothness** — how far similarity predicts similar behaviour across all
+  pairs. Low means neighbourhood models will not work here and the cliffs are the signal.
+- **Region enrichment** — what distinguishes a selected cluster from the rest, by
+  hypergeometric test over scaffolds and functional groups, BH-corrected.
+- **Diversity** — nearest-neighbour redundancy, a property of the set rather than of any
+  molecule in it.
+
 ## Limitations
 
 - Pure NumPy means CPU-bound training; the benchmark budgets are sized for four cores, so
@@ -170,6 +238,11 @@ python -m benchmarks.generate                   # train and evaluate the generat
   alchemical transformations, which need a real force field.
 - Binding affinity benchmarks (Davis/KIBA) and the generation results are still running; see
   `results/` for what has completed.
+- The ADMET endpoints are screening aids, not assay replacements. The rule-based layer
+  places a molecule relative to ranges drugs have historically occupied; the trained layer
+  is bounded by the public data behind each endpoint, which is itself noisy and unevenly
+  sized (DILI has 475 rows). Outside the applicability domain a prediction is
+  extrapolation, and the panel marks it as such.
 
 ## License
 

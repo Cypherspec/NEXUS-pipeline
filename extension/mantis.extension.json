@@ -48,6 +48,9 @@
         "actions": [
             "analyze",
             "admet",
+            "admet_predict",
+            "landscape",
+            "region",
             "neighbors",
             "screen",
             "predict",
