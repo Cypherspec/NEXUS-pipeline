@@ -906,6 +906,54 @@ body {
 .nexus-stack { gap: 30px !important; }
 .nexus-stack > * + * { padding-top: 22px !important; }
 
-/* Status dots are chrome, not data: they take the panel's own sage rather
-   than a green that appears nowhere else. */
-.nexus-stack span > span[class*="rounded-full"] { background: #bfe3dc !important; }
+/* Note: an earlier revision recoloured every small round dot in the results to
+   the panel's sage. That also hit the conformer's element legend, whose dots
+   must keep the colours of the atoms they label (grey carbon, red oxygen, blue
+   nitrogen), so the override is gone: a legend swatch is data, not chrome. */
+
+/* ===================================================================== *
+ * Materials, matched to the Thermodynamic Waddington panel.
+ *
+ * Surfaces gain a hairline of light along the top edge and a shadow beneath,
+ * which is what makes one read as a sheet of material rather than a painted
+ * rectangle. Plot areas become shallow wells so a chart is visibly held by
+ * something; the run button becomes the single raised control.
+ * ===================================================================== */
+
+/* Plot areas: a shallow well, so a chart sits in the page rather than on it. */
+.nexus-three, .nexus-stack > div:has(> svg), .nexus-stack > div:has(> div > svg) {
+    border-radius: 14px !important;
+    background: rgb(255 255 255 / 0.018) !important;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.045),
+                inset 0 0 0 1px rgb(255 255 255 / 0.03) !important;
+    padding: 10px !important;
+}
+.nexus-three svg, .nexus-stack svg { border-radius: 10px !important; }
+
+/* Selects and the scope row read as controls, not as text with a box. */
+.nexus-controls select, .nexus-controls input[type="number"] {
+    border-radius: 9px !important;
+    background: rgb(255 255 255 / 0.05) !important;
+    border: 1px solid rgb(255 255 255 / 0.08) !important;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
+    padding: 5px 9px !important;
+}
+.nexus-controls select:hover { background: rgb(255 255 255 / 0.08) !important; }
+
+/* The single filled control gets a lit top edge, so it looks pressable. */
+.nexus-run {
+    border-radius: 11px !important;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.55),
+                0 1px 2px rgb(0 0 0 / 0.3), 0 6px 16px rgb(0 0 0 / 0.26) !important;
+}
+
+/* Scaffold chips as pills. */
+.nexus-families button { border-radius: 999px !important; padding: 3px 10px !important; }
+
+/* The count pill matches the Live pill on the other panel. */
+.nexus-hero-pill { border-radius: 999px !important; padding: 3px 10px !important; }
+
+@media (prefers-contrast: more) {
+    .nexus-three, .nexus-stack > div:has(> svg) { box-shadow: inset 0 0 0 1px #4a4c54 !important; }
+    .nexus-controls select { border-color: #4a4c54 !important; }
+}
