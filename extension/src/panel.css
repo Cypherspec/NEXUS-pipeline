@@ -748,3 +748,164 @@ body {
 .nexus-eyebrow i { background: #eeeef2 !important; box-shadow: none !important; }
 .nexus-three, .nexus-three > div, .nexus-stack canvas { border: 0 !important; background: transparent !important; }
 .nexus-tiles [style*="color"] { color: #f2f2f3 !important; }
+
+/* ===================================================================== *
+ * Craft layer.
+ *
+ * The panel is a floating surface inside Mantis, so it is built like one:
+ * a translucent chrome the results pass beneath, press feedback on the frame
+ * the pointer goes down, and type whose tracking changes with its size.
+ *
+ * Motion follows two rules. Enters use a strong ease-out, because the user is
+ * watching the first frame most closely and a slow start reads as lag. Nothing
+ * animates that a user triggers dozens of times an hour -- tab switches move
+ * their underline and nothing else.
+ * ===================================================================== */
+
+:root {
+    /* The built-in CSS easings are too weak to read as intentional. */
+    --nx-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --nx-ease-io: cubic-bezier(0.77, 0, 0.175, 1);
+    --nx-press: 140ms;
+    --nx-hover: 160ms;
+    --nx-enter: 280ms;
+}
+
+/* --- Chrome as a material --------------------------------------------- */
+
+/* Header and controls are one floating layer. The blur is what makes it read
+   as glass over the page rather than a painted strip. */
+.nexus-hero, .nexus-controls {
+    position: relative;
+    z-index: 2;
+    background: rgb(13 14 16 / 0.72) !important;
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+}
+.nexus-hero { padding-bottom: 4px; }
+
+/* Scroll edge effect: content fades where it meets the chrome, instead of
+   being cut by a hairline. Only the top edge, only where they overlap. */
+.nexus-body {
+    mask-image: linear-gradient(to bottom, transparent 0, #000 16px);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 16px);
+    scroll-behavior: smooth;
+    overscroll-behavior: contain;
+}
+
+/* --- Response: feedback on pointer-down, never on release -------------- */
+
+.nexus-tabs button, .nexus-run, .nexus-families button,
+.nexus-controls select, .nexus-check {
+    transition: transform var(--nx-press) var(--nx-ease-out),
+                color var(--nx-hover) ease,
+                background-color var(--nx-hover) ease,
+                border-color var(--nx-hover) ease,
+                box-shadow var(--nx-hover) ease;
+}
+.nexus-tabs button:active, .nexus-families button:active { transform: scale(0.97); }
+.nexus-run:active:not(:disabled) { transform: scale(0.985); }
+
+.nexus-tabs button:hover { color: #c9cdd8 !important; }
+.nexus-families button:hover {
+    background: rgb(255 255 255 / 0.05) !important;
+    border-color: rgb(255 255 255 / 0.16) !important;
+}
+
+/* The active tab's underline is the one thing that moves on a tab switch. */
+.nexus-tabs button { position: relative; }
+.nexus-tabs button::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1.5px;
+    background: #eef0f6; border-radius: 1px;
+    transform: scaleX(0); transform-origin: center;
+    transition: transform 220ms var(--nx-ease-out);
+}
+.nexus-tabs button[aria-pressed="true"]::after { transform: scaleX(1); }
+.nexus-tabs button[aria-pressed="true"] { box-shadow: none !important; }
+
+/* The run button is the one bright surface; give it depth and a lift. */
+.nexus-run {
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 16px rgb(0 0 0 / 0.22);
+}
+.nexus-run:hover:not(:disabled) {
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 22px rgb(0 0 0 / 0.3);
+}
+.nexus-run:focus-visible, .nexus-tabs button:focus-visible,
+.nexus-controls select:focus-visible, .nexus-families button:focus-visible {
+    outline: 2px solid rgb(165 220 255 / 0.7); outline-offset: 2px;
+}
+
+/* --- Type: tracking is size-specific, never one value ------------------ */
+
+.nexus-title { line-height: 1.06 !important; font-optical-sizing: auto; }
+.nexus-hero .nexus-sub { letter-spacing: 0.002em; }
+.nexus-card-head { font-feature-settings: "tnum" 1; }
+.nexus-tiles .tabular-nums, .nexus-tiles strong, .nexus-tiles b {
+    line-height: 1.04 !important; font-variant-numeric: tabular-nums;
+}
+/* Small uppercase labels need positive tracking to stay legible; large
+   figures need negative, or the digits drift apart as they grow. */
+.nexus-tiles > * > :first-child { font-feature-settings: "ss01" 1; }
+.nexus-body table { font-variant-numeric: tabular-nums; }
+
+/* --- Results arrive as one movement, lightly staggered ----------------- */
+
+@media (prefers-reduced-motion: no-preference) {
+    .nexus-stack > * {
+        animation: nexus-arrive var(--nx-enter) var(--nx-ease-out) both;
+    }
+    .nexus-stack > *:nth-child(2) { animation-delay: 40ms; }
+    .nexus-stack > *:nth-child(3) { animation-delay: 80ms; }
+    .nexus-stack > *:nth-child(4) { animation-delay: 120ms; }
+    .nexus-stack > *:nth-child(n + 5) { animation-delay: 160ms; }
+}
+/* Never from scale(0): nothing in the world appears out of nothing. A touch
+   of blur bridges the two states so the eye reads one object, not two. */
+@keyframes nexus-arrive {
+    from { opacity: 0; transform: translateY(8px) scale(0.994); filter: blur(3px); }
+    to   { opacity: 1; transform: none; filter: blur(0); }
+}
+
+/* --- Rows and tables --------------------------------------------------- */
+
+.nexus-body tbody tr { transition: background-color var(--nx-hover) ease; }
+.nexus-body tbody tr:hover { background: rgb(255 255 255 / 0.035); }
+.nexus-body td, .nexus-body th { padding-block: 3.5px; }
+
+/* --- Accessibility: three independent signals, all honoured ------------ */
+
+@media (prefers-reduced-motion: reduce) {
+    .nexus-root *, .nexus-root *::before, .nexus-root *::after {
+        animation-duration: 1ms !important; animation-delay: 0ms !important;
+        transition-duration: 1ms !important;
+    }
+    .nexus-body { scroll-behavior: auto; }
+}
+@media (prefers-reduced-transparency: reduce) {
+    .nexus-hero, .nexus-controls {
+        background: #0d0e10 !important;
+        backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+    }
+}
+@media (prefers-contrast: more) {
+    .nexus-hero, .nexus-controls { background: #000 !important; }
+    .nexus-stack > * + * { border-top-color: #4a4c54 !important; }
+    .nexus-hint, .nexus-card-meta { color: #c9cdd8 !important; }
+    .nexus-tabs button { color: #c9cdd8 !important; }
+}
+
+/* The open layout means a plot sits on the page, not in a well: no inset
+   background, no outline around the 3D views, and the scaffold panel reads
+   like every other section rather than the one surviving card. */
+.nexus-stack svg, .nexus-three svg { border: 0 !important; }
+.nexus-stack div:has(> .nexus-families),
+.nexus-stack > div > div:has(> table) {
+    background: transparent !important; border: 0 !important;
+    border-radius: 0 !important; padding: 0 !important;
+}
+.nexus-stack { gap: 30px !important; }
+.nexus-stack > * + * { padding-top: 22px !important; }
+
+/* Status dots are chrome, not data: they take the panel's own sage rather
+   than a green that appears nowhere else. */
+.nexus-stack span > span[class*="rounded-full"] { background: #bfe3dc !important; }
