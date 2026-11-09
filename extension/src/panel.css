@@ -727,28 +727,6 @@ body {
 @keyframes nexus-drift { to { background-position: 220px -160px, -260px 200px, 300px 180px, -240px -220px, 280px 150px, -200px 240px, 160px -120px, -180px 140px, 0 0; } }
 @keyframes nexus-twinkle { from { opacity: .4; } to { opacity: .7; } }
 
-/* Open layout: no cards. Sections sit on the page, separated by space and a
-   hairline, so the data carries the colour and nothing else competes with it. */
-.nexus-body > .nexus-stack > section, .nexus-card,
-.nexus-stack > div:has(> svg), .nexus-stack > div:has(canvas) {
-    background: transparent !important; border: 0 !important; box-shadow: none !important;
-    border-radius: 0 !important; padding: 0 !important; margin: 0 !important;
-}
-.nexus-stack { gap: 44px !important; }
-.nexus-stack > * + * { padding-top: 28px !important; border-top: 1px solid #1b1c20 !important; }
-.nexus-stack svg { background: transparent !important; }
-.nexus-body { padding: 8px 24px 40px !important; }
-.nexus-card-head { margin-bottom: 18px !important; }
-
-/* Summary: one strip of four large figures with room around them. */
-.nexus-tiles { border: 0 !important; background: transparent !important; border-radius: 0 !important; padding: 12px 0 !important; }
-.nexus-tiles > * { border: 0 !important; background: transparent !important; padding: 0 !important; }
-.nexus-tiles .tabular-nums, .nexus-tiles strong, .nexus-tiles b { font-size: 34px !important; letter-spacing: -0.035em !important; }
-.nexus-title { font-size: 34px !important; letter-spacing: -0.035em !important; }
-.nexus-eyebrow i { background: #eeeef2 !important; box-shadow: none !important; }
-.nexus-three, .nexus-three > div, .nexus-stack canvas { border: 0 !important; background: transparent !important; }
-.nexus-tiles [style*="color"] { color: #f2f2f3 !important; }
-
 /* ===================================================================== *
  * Craft layer.
  *
@@ -894,66 +872,119 @@ body {
     .nexus-tabs button { color: #c9cdd8 !important; }
 }
 
-/* The open layout means a plot sits on the page, not in a well: no inset
-   background, no outline around the 3D views, and the scaffold panel reads
-   like every other section rather than the one surviving card. */
-.nexus-stack svg, .nexus-three svg { border: 0 !important; }
-.nexus-stack div:has(> .nexus-families),
-.nexus-stack > div > div:has(> table) {
-    background: transparent !important; border: 0 !important;
-    border-radius: 0 !important; padding: 0 !important;
-}
-.nexus-stack { gap: 30px !important; }
-.nexus-stack > * + * { padding-top: 22px !important; }
-
-/* Note: an earlier revision recoloured every small round dot in the results to
-   the panel's sage. That also hit the conformer's element legend, whose dots
-   must keep the colours of the atoms they label (grey carbon, red oxygen, blue
-   nitrogen), so the override is gone: a legend swatch is data, not chrome. */
 
 /* ===================================================================== *
- * Materials, matched to the Thermodynamic Waddington panel.
+ * Surface system (final, authoritative).
  *
- * Surfaces gain a hairline of light along the top edge and a shadow beneath,
- * which is what makes one read as a sheet of material rather than a painted
- * rectangle. Plot areas become shallow wells so a chart is visibly held by
- * something; the run button becomes the single raised control.
+ * One rule for every result module, so the panel reads as a set of crisp
+ * cards on a near-black page rather than muddy shapes floating in it. The
+ * earlier passes disagreed -- one stripped cards to transparent, the next
+ * added a near-invisible inset well -- and the disagreement is what looked
+ * cheap. This block is the single source of truth: card surface, crisp
+ * hairline, one soft shadow, a recessed canvas for the plot inside each card.
  * ===================================================================== */
 
-/* Plot areas: a shallow well, so a chart sits in the page rather than on it. */
-.nexus-three, .nexus-stack > div:has(> svg), .nexus-stack > div:has(> div > svg) {
-    border-radius: 14px !important;
-    background: rgb(255 255 255 / 0.018) !important;
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.045),
-                inset 0 0 0 1px rgb(255 255 255 / 0.03) !important;
-    padding: 10px !important;
+:root {
+    --surface:      #15171e;   /* a clear step up from the page, not a smudge */
+    --surface-line: rgb(255 255 255 / 0.08);
+    --surface-top:  rgb(255 255 255 / 0.04);   /* light caught on the top edge */
+    --canvas:       #0c0e14;   /* the recessed plot area inside a card */
+    --divider:      rgb(255 255 255 / 0.06);
 }
-.nexus-three svg, .nexus-stack svg { border-radius: 10px !important; }
 
-/* Selects and the scope row read as controls, not as text with a box. */
+/* The page: near-black, with the existing cool glow kept but quieted. */
+.nexus-root { background: #090a0e !important; }
+
+/* Rhythm: one consistent gap, no giant dead bands, no stray dividers. */
+.nexus-body { padding: 14px !important; mask-image: none !important; -webkit-mask-image: none !important; }
+.nexus-stack { gap: 12px !important; }
+.nexus-stack > * + * { padding-top: 0 !important; border-top: 0 !important; }
+
+/* Every module is a card. Selecting on structure as well as class so the 3D
+   views and chart wrappers are carded the same as declared sections. */
+.nexus-stack > .nexus-card,
+.nexus-stack > section,
+.nexus-stack > .nexus-tiles,
+.nexus-stack > .nexus-three,
+.nexus-stack > div:has(> svg),
+.nexus-stack > div:has(> canvas),
+.nexus-stack > div:has(> div > svg) {
+    margin: 0 !important;
+    padding: 15px 16px !important;
+    background: var(--surface) !important;
+    border: 1px solid var(--surface-line) !important;
+    border-radius: 14px !important;
+    box-shadow: inset 0 1px 0 var(--surface-top), 0 1px 3px rgb(0 0 0 / 0.35) !important;
+}
+
+/* The plot canvas is recessed inside its card: this is the one inset that
+   earns its keep -- card lifts off the page, plot sinks into the card. */
+.nexus-card svg, .nexus-three svg, .nexus-stack canvas,
+.nexus-stack > div:has(> svg) svg {
+    background: var(--canvas) !important;
+    border-radius: 10px !important;
+    border: 1px solid rgb(255 255 255 / 0.04) !important;
+}
+
+/* Card header: crisp small label left, mono meta right, a hairline under it so
+   the title reads as a header and not as floating text. */
+.nexus-card-head {
+    margin-bottom: 12px !important;
+    padding-bottom: 10px !important;
+    border-bottom: 1px solid var(--divider) !important;
+    font-size: 9.5px !important; letter-spacing: 0.15em !important; color: #8891a3 !important;
+}
+.nexus-card-meta { color: #6f7789 !important; }
+
+/* Summary strip: a single card divided into four cells by hairlines, numbers
+   large and tight, labels small above them. */
+.nexus-tiles { gap: 0 !important; overflow: hidden; }
+.nexus-tiles > * {
+    padding: 2px 18px !important;
+    border: 0 !important; background: transparent !important; box-shadow: none !important;
+    border-right: 1px solid var(--divider) !important;
+}
+.nexus-tiles > *:first-child { padding-left: 2px !important; }
+.nexus-tiles > *:last-child { border-right: 0 !important; }
+.nexus-tiles .tabular-nums, .nexus-tiles strong, .nexus-tiles b {
+    font-size: 30px !important; letter-spacing: -0.035em !important; line-height: 1.1 !important;
+    color: #f4f5f8 !important;
+}
+.nexus-tiles > * > :first-child {
+    font-size: 9px !important; letter-spacing: 0.14em !important; color: #8891a3 !important;
+    margin-bottom: 2px !important;
+}
+
+/* Non-card rows (the rule dots and the shade-by control) span the grid and sit
+   quietly -- no card chrome, tight to their neighbours so nothing orphans. */
+.nexus-stack > div:not(:has(svg)):not(:has(canvas)):not(.nexus-tiles):not(.nexus-three) {
+    padding: 2px 2px !important;
+}
+
+/* Controls, selects, chips: one pill language. */
 .nexus-controls select, .nexus-controls input[type="number"] {
     border-radius: 9px !important;
-    background: rgb(255 255 255 / 0.05) !important;
-    border: 1px solid rgb(255 255 255 / 0.08) !important;
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
-    padding: 5px 9px !important;
+    background: rgb(255 255 255 / 0.04) !important;
+    border: 1px solid rgb(255 255 255 / 0.09) !important;
+    padding: 5px 10px !important; color: #e8eaf0 !important;
 }
-.nexus-controls select:hover { background: rgb(255 255 255 / 0.08) !important; }
+.nexus-controls select:hover { background: rgb(255 255 255 / 0.07) !important; }
+.nexus-families button { border-radius: 999px !important; padding: 3px 11px !important; }
+.nexus-hero-pill { border-radius: 999px !important; }
 
-/* The single filled control gets a lit top edge, so it looks pressable. */
+/* The run button stays the one filled, lifted control. */
 .nexus-run {
     border-radius: 11px !important;
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.55),
-                0 1px 2px rgb(0 0 0 / 0.3), 0 6px 16px rgb(0 0 0 / 0.26) !important;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.5), 0 2px 10px rgb(0 0 0 / 0.3) !important;
 }
 
-/* Scaffold chips as pills. */
-.nexus-families button { border-radius: 999px !important; padding: 3px 10px !important; }
-
-/* The count pill matches the Live pill on the other panel. */
-.nexus-hero-pill { border-radius: 999px !important; padding: 3px 10px !important; }
+/* Tables breathe a little more inside their card. */
+.nexus-body td, .nexus-body th { padding-block: 4px !important; }
+.nexus-body th { color: #6f7789 !important; border-bottom: 1px solid var(--divider) !important; }
 
 @media (prefers-contrast: more) {
-    .nexus-three, .nexus-stack > div:has(> svg) { box-shadow: inset 0 0 0 1px #4a4c54 !important; }
-    .nexus-controls select { border-color: #4a4c54 !important; }
+    .nexus-stack > .nexus-card, .nexus-stack > section, .nexus-stack > .nexus-tiles,
+    .nexus-stack > .nexus-three, .nexus-stack > div:has(> svg) {
+        border-color: #4a4c54 !important;
+    }
 }
