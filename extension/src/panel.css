@@ -727,24 +727,385 @@ body {
 @keyframes nexus-drift { to { background-position: 220px -160px, -260px 200px, 300px 180px, -240px -220px, 280px 150px, -200px 240px, 160px -120px, -180px 140px, 0 0; } }
 @keyframes nexus-twinkle { from { opacity: .4; } to { opacity: .7; } }
 
-/* Open layout: no cards. Sections sit on the page, separated by space and a
-   hairline, so the data carries the colour and nothing else competes with it. */
-.nexus-body > .nexus-stack > section, .nexus-card,
-.nexus-stack > div:has(> svg), .nexus-stack > div:has(canvas) {
-    background: transparent !important; border: 0 !important; box-shadow: none !important;
-    border-radius: 0 !important; padding: 0 !important; margin: 0 !important;
-}
-.nexus-stack { gap: 44px !important; }
-.nexus-stack > * + * { padding-top: 28px !important; border-top: 1px solid #1b1c20 !important; }
-.nexus-stack svg { background: transparent !important; }
-.nexus-body { padding: 8px 24px 40px !important; }
-.nexus-card-head { margin-bottom: 18px !important; }
+/* ===================================================================== *
+ * Craft layer.
+ *
+ * The panel is a floating surface inside Mantis, so it is built like one:
+ * a translucent chrome the results pass beneath, press feedback on the frame
+ * the pointer goes down, and type whose tracking changes with its size.
+ *
+ * Motion follows two rules. Enters use a strong ease-out, because the user is
+ * watching the first frame most closely and a slow start reads as lag. Nothing
+ * animates that a user triggers dozens of times an hour -- tab switches move
+ * their underline and nothing else.
+ * ===================================================================== */
 
-/* Summary: one strip of four large figures with room around them. */
-.nexus-tiles { border: 0 !important; background: transparent !important; border-radius: 0 !important; padding: 12px 0 !important; }
-.nexus-tiles > * { border: 0 !important; background: transparent !important; padding: 0 !important; }
-.nexus-tiles .tabular-nums, .nexus-tiles strong, .nexus-tiles b { font-size: 34px !important; letter-spacing: -0.035em !important; }
-.nexus-title { font-size: 34px !important; letter-spacing: -0.035em !important; }
-.nexus-eyebrow i { background: #eeeef2 !important; box-shadow: none !important; }
-.nexus-three, .nexus-three > div, .nexus-stack canvas { border: 0 !important; background: transparent !important; }
-.nexus-tiles [style*="color"] { color: #f2f2f3 !important; }
+:root {
+    /* The built-in CSS easings are too weak to read as intentional. */
+    --nx-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --nx-ease-io: cubic-bezier(0.77, 0, 0.175, 1);
+    --nx-press: 140ms;
+    --nx-hover: 160ms;
+    --nx-enter: 280ms;
+}
+
+/* --- Chrome as a material --------------------------------------------- */
+
+/* Header and controls are one floating layer. The blur is what makes it read
+   as glass over the page rather than a painted strip. */
+.nexus-hero, .nexus-controls {
+    position: relative;
+    z-index: 2;
+    background: rgb(13 14 16 / 0.72) !important;
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+}
+.nexus-hero { padding-bottom: 4px; }
+
+/* Scroll edge effect: content fades where it meets the chrome, instead of
+   being cut by a hairline. Only the top edge, only where they overlap. */
+.nexus-body {
+    mask-image: linear-gradient(to bottom, transparent 0, #000 16px);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 16px);
+    scroll-behavior: smooth;
+    overscroll-behavior: contain;
+}
+
+/* --- Response: feedback on pointer-down, never on release -------------- */
+
+.nexus-tabs button, .nexus-run, .nexus-families button,
+.nexus-controls select, .nexus-check {
+    transition: transform var(--nx-press) var(--nx-ease-out),
+                color var(--nx-hover) ease,
+                background-color var(--nx-hover) ease,
+                border-color var(--nx-hover) ease,
+                box-shadow var(--nx-hover) ease;
+}
+.nexus-tabs button:active, .nexus-families button:active { transform: scale(0.97); }
+.nexus-run:active:not(:disabled) { transform: scale(0.985); }
+
+.nexus-tabs button:hover { color: #c9cdd8 !important; }
+.nexus-families button:hover {
+    background: rgb(255 255 255 / 0.05) !important;
+    border-color: rgb(255 255 255 / 0.16) !important;
+}
+
+/* The active tab's underline is the one thing that moves on a tab switch. */
+.nexus-tabs button { position: relative; }
+.nexus-tabs button::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1.5px;
+    background: #eef0f6; border-radius: 1px;
+    transform: scaleX(0); transform-origin: center;
+    transition: transform 220ms var(--nx-ease-out);
+}
+.nexus-tabs button[aria-pressed="true"]::after { transform: scaleX(1); }
+.nexus-tabs button[aria-pressed="true"] { box-shadow: none !important; }
+
+/* The run button is the one bright surface; give it depth and a lift. */
+.nexus-run {
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 16px rgb(0 0 0 / 0.22);
+}
+.nexus-run:hover:not(:disabled) {
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 22px rgb(0 0 0 / 0.3);
+}
+.nexus-run:focus-visible, .nexus-tabs button:focus-visible,
+.nexus-controls select:focus-visible, .nexus-families button:focus-visible {
+    outline: 2px solid rgb(165 220 255 / 0.7); outline-offset: 2px;
+}
+
+/* --- Type: tracking is size-specific, never one value ------------------ */
+
+.nexus-title { line-height: 1.06 !important; font-optical-sizing: auto; }
+.nexus-hero .nexus-sub { letter-spacing: 0.002em; }
+.nexus-card-head { font-feature-settings: "tnum" 1; }
+.nexus-tiles .tabular-nums, .nexus-tiles strong, .nexus-tiles b {
+    line-height: 1.04 !important; font-variant-numeric: tabular-nums;
+}
+/* Small uppercase labels need positive tracking to stay legible; large
+   figures need negative, or the digits drift apart as they grow. */
+.nexus-tiles > * > :first-child { font-feature-settings: "ss01" 1; }
+.nexus-body table { font-variant-numeric: tabular-nums; }
+
+/* --- Results arrive as one movement, lightly staggered ----------------- */
+
+@media (prefers-reduced-motion: no-preference) {
+    .nexus-stack > * {
+        animation: nexus-arrive var(--nx-enter) var(--nx-ease-out) both;
+    }
+    .nexus-stack > *:nth-child(2) { animation-delay: 40ms; }
+    .nexus-stack > *:nth-child(3) { animation-delay: 80ms; }
+    .nexus-stack > *:nth-child(4) { animation-delay: 120ms; }
+    .nexus-stack > *:nth-child(n + 5) { animation-delay: 160ms; }
+}
+/* Never from scale(0): nothing in the world appears out of nothing. A touch
+   of blur bridges the two states so the eye reads one object, not two. */
+@keyframes nexus-arrive {
+    from { opacity: 0; transform: translateY(8px) scale(0.994); filter: blur(3px); }
+    to   { opacity: 1; transform: none; filter: blur(0); }
+}
+
+/* --- Rows and tables --------------------------------------------------- */
+
+.nexus-body tbody tr { transition: background-color var(--nx-hover) ease; }
+.nexus-body tbody tr:hover { background: rgb(255 255 255 / 0.035); }
+.nexus-body td, .nexus-body th { padding-block: 3.5px; }
+
+/* --- Accessibility: three independent signals, all honoured ------------ */
+
+@media (prefers-reduced-motion: reduce) {
+    .nexus-root *, .nexus-root *::before, .nexus-root *::after {
+        animation-duration: 1ms !important; animation-delay: 0ms !important;
+        transition-duration: 1ms !important;
+    }
+    .nexus-body { scroll-behavior: auto; }
+}
+@media (prefers-reduced-transparency: reduce) {
+    .nexus-hero, .nexus-controls {
+        background: #0d0e10 !important;
+        backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+    }
+}
+@media (prefers-contrast: more) {
+    .nexus-hero, .nexus-controls { background: #000 !important; }
+    .nexus-stack > * + * { border-top-color: #4a4c54 !important; }
+    .nexus-hint, .nexus-card-meta { color: #c9cdd8 !important; }
+    .nexus-tabs button { color: #c9cdd8 !important; }
+}
+
+
+/* ===================================================================== *
+ * Surface system (final, authoritative).
+ *
+ * One rule for every result module, so the panel reads as a set of crisp
+ * cards on a near-black page rather than muddy shapes floating in it. The
+ * earlier passes disagreed -- one stripped cards to transparent, the next
+ * added a near-invisible inset well -- and the disagreement is what looked
+ * cheap. This block is the single source of truth: card surface, crisp
+ * hairline, one soft shadow, a recessed canvas for the plot inside each card.
+ * ===================================================================== */
+
+:root {
+    --surface:      #15171e;   /* a clear step up from the page, not a smudge */
+    --surface-line: rgb(255 255 255 / 0.08);
+    --surface-top:  rgb(255 255 255 / 0.04);   /* light caught on the top edge */
+    --canvas:       #0c0e14;   /* the recessed plot area inside a card */
+    --divider:      rgb(255 255 255 / 0.06);
+}
+
+/* The page: near-black, with the existing cool glow kept but quieted. */
+.nexus-root { background: #090a0e !important; }
+
+/* Rhythm: one consistent gap, no giant dead bands, no stray dividers. */
+.nexus-body { padding: 14px !important; mask-image: none !important; -webkit-mask-image: none !important; }
+.nexus-stack { gap: 12px !important; }
+.nexus-stack > * + * { padding-top: 0 !important; border-top: 0 !important; }
+
+/* Every module is a card. Selecting on structure as well as class so the 3D
+   views and chart wrappers are carded the same as declared sections. */
+.nexus-stack > .nexus-card,
+.nexus-stack > section,
+.nexus-stack > .nexus-tiles,
+.nexus-stack > .nexus-three,
+.nexus-stack > div:has(> svg),
+.nexus-stack > div:has(> canvas),
+.nexus-stack > div:has(> div > svg) {
+    margin: 0 !important;
+    padding: 15px 16px !important;
+    background: var(--surface) !important;
+    border: 1px solid var(--surface-line) !important;
+    border-radius: 14px !important;
+    box-shadow: inset 0 1px 0 var(--surface-top), 0 1px 3px rgb(0 0 0 / 0.35) !important;
+}
+
+/* The plot canvas is recessed inside its card: this is the one inset that
+   earns its keep -- card lifts off the page, plot sinks into the card. */
+.nexus-card svg, .nexus-three svg, .nexus-stack canvas,
+.nexus-stack > div:has(> svg) svg {
+    background: var(--canvas) !important;
+    border-radius: 10px !important;
+    border: 1px solid rgb(255 255 255 / 0.04) !important;
+}
+
+/* Card header: crisp small label left, mono meta right, a hairline under it so
+   the title reads as a header and not as floating text. */
+.nexus-card-head {
+    margin-bottom: 12px !important;
+    padding-bottom: 10px !important;
+    border-bottom: 1px solid var(--divider) !important;
+    font-size: 9.5px !important; letter-spacing: 0.15em !important; color: #8891a3 !important;
+}
+.nexus-card-meta { color: #6f7789 !important; }
+
+/* Summary strip: a single card divided into four cells by hairlines, numbers
+   large and tight, labels small above them. */
+.nexus-tiles { gap: 0 !important; overflow: hidden; }
+.nexus-tiles > * {
+    padding: 2px 18px !important;
+    border: 0 !important; background: transparent !important; box-shadow: none !important;
+    border-right: 1px solid var(--divider) !important;
+}
+.nexus-tiles > *:first-child { padding-left: 2px !important; }
+.nexus-tiles > *:last-child { border-right: 0 !important; }
+.nexus-tiles .tabular-nums, .nexus-tiles strong, .nexus-tiles b {
+    font-size: 30px !important; letter-spacing: -0.035em !important; line-height: 1.1 !important;
+    color: #f4f5f8 !important;
+}
+.nexus-tiles > * > :first-child {
+    font-size: 9px !important; letter-spacing: 0.14em !important; color: #8891a3 !important;
+    margin-bottom: 2px !important;
+}
+
+/* Non-card rows (the rule dots and the shade-by control) span the grid and sit
+   quietly -- no card chrome, tight to their neighbours so nothing orphans. */
+.nexus-stack > div:not(:has(svg)):not(:has(canvas)):not(.nexus-tiles):not(.nexus-three) {
+    padding: 2px 2px !important;
+}
+
+/* Controls, selects, chips: one pill language. */
+.nexus-controls select, .nexus-controls input[type="number"] {
+    border-radius: 9px !important;
+    background: rgb(255 255 255 / 0.04) !important;
+    border: 1px solid rgb(255 255 255 / 0.09) !important;
+    padding: 5px 10px !important; color: #e8eaf0 !important;
+}
+.nexus-controls select:hover { background: rgb(255 255 255 / 0.07) !important; }
+.nexus-families button { border-radius: 999px !important; padding: 3px 11px !important; }
+.nexus-hero-pill { border-radius: 999px !important; }
+
+/* The run button stays the one filled, lifted control. */
+.nexus-run {
+    border-radius: 11px !important;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.5), 0 2px 10px rgb(0 0 0 / 0.3) !important;
+}
+
+/* Tables breathe a little more inside their card. */
+.nexus-body td, .nexus-body th { padding-block: 4px !important; }
+.nexus-body th { color: #6f7789 !important; border-bottom: 1px solid var(--divider) !important; }
+
+@media (prefers-contrast: more) {
+    .nexus-stack > .nexus-card, .nexus-stack > section, .nexus-stack > .nexus-tiles,
+    .nexus-stack > .nexus-three, .nexus-stack > div:has(> svg) {
+        border-color: #4a4c54 !important;
+    }
+}
+
+/* ===================================================================== *
+ * Live blue (Mantis's own look). A slow aurora and a faint drifting
+ * constellation behind the frosted hero, and a flow of blue across the title
+ * keyword -- the landing-page feel -- all kept to the header band so the data
+ * below stays calm. Re-enables the aurora/sheen the neutral pass switched off.
+ * ===================================================================== */
+.nexus-hero, .nexus-controls { background: rgb(11 13 18 / 0.5) !important; }
+
+.nexus-root::before {
+    display: block !important;
+    inset: -70px -8% auto -8% !important; height: 400px !important; z-index: -1 !important;
+    background:
+        radial-gradient(44% 60% at 16% 26%, rgb(59 130 246 / 0.42), transparent 70%),
+        radial-gradient(42% 56% at 76% 14%, rgb(139 118 255 / 0.34), transparent 72%),
+        radial-gradient(40% 52% at 50% 46%, rgb(34 211 238 / 0.18), transparent 74%) !important;
+    filter: blur(10px) saturate(135%);
+    -webkit-mask-image: linear-gradient(to bottom, #000 42%, transparent);
+    mask-image: linear-gradient(to bottom, #000 42%, transparent);
+    animation: nexus-aurora 20s ease-in-out infinite alternate !important;
+    will-change: transform;
+}
+.nexus-root::after {
+    content: ""; position: absolute; inset: -40px 0 auto 0; height: 320px; z-index: -1;
+    pointer-events: none;
+    background-image: radial-gradient(rgb(165 220 255 / 0.55) 1px, transparent 1.4px);
+    background-size: 26px 26px;
+    -webkit-mask-image: linear-gradient(to bottom, rgb(0 0 0 / 0.55), transparent 70%);
+    mask-image: linear-gradient(to bottom, rgb(0 0 0 / 0.55), transparent 70%);
+    animation: nexus-drift-dots 26s linear infinite;
+}
+@keyframes nexus-drift-dots { to { background-position: 160px 44px; } }
+
+.nexus-title-key {
+    background: linear-gradient(100deg, #8cc8ff 0%, #4f8bff 30%, #8b7bff 55%, #4f8bff 78%, #8cc8ff 100%) !important;
+    background-size: 220% 100% !important;
+    -webkit-background-clip: text !important; background-clip: text !important;
+    -webkit-text-fill-color: transparent !important; color: transparent !important;
+    animation: nexus-sheen 7s linear infinite !important;
+}
+.nexus-eyebrow i {
+    background: #5b9dff !important;
+    animation: nexus-pulse 2.6s ease-out infinite !important;
+}
+@media (prefers-reduced-motion: reduce) {
+    .nexus-root::before, .nexus-root::after, .nexus-title-key, .nexus-eyebrow i { animation: none !important; }
+}
+
+/* ===================================================================== *
+ * Code-wave hero, after Mantis's home screen: a dense field of faint blue
+ * glyphs with a wave of brighter blue flowing through them. The glyphs are
+ * real text (seeded, static); the wave is a set of blue blooms drifting over a
+ * dim floor, clipped to that text, so bands of characters light up and flow.
+ * This is the texture now, so the plain dot constellation is retired.
+ * ===================================================================== */
+.nexus-hero { overflow: hidden; }
+.nexus-root::after { display: none !important; }      /* the dots gave way to glyphs */
+.nexus-root::before { opacity: 0.55; }                 /* keep a faint glow for depth */
+
+.nexus-codewave {
+    position: absolute; inset: -26px -12px auto -12px; height: 330px; z-index: 0;
+    pointer-events: none; user-select: none;
+    font-family: "SFMono-Regular", "JetBrains Mono", ui-monospace, Consolas, monospace;
+    font-size: 11.5px; line-height: 12.5px; letter-spacing: 1.5px; white-space: pre;
+    color: transparent;
+    background-image:
+        radial-gradient(58% 130% at 18% 24%, #7cc0ff 0%, transparent 55%),
+        radial-gradient(54% 120% at 74% 68%, #4f8bff 0%, transparent 52%),
+        radial-gradient(44% 100% at 48% 42%, #34d3ee 0%, transparent 58%),
+        radial-gradient(50% 120% at 92% 18%, #8b7bff 0%, transparent 56%),
+        linear-gradient(rgb(120 150 210 / 0.18), rgb(120 150 210 / 0.18));  /* dim floor: every glyph faintly blue */
+    background-size: 190% 190%, 175% 175%, 165% 165%, 180% 180%, 100% 100%;
+    background-repeat: no-repeat;
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 48%, transparent 92%);
+    mask-image: linear-gradient(to bottom, #000 0, #000 48%, transparent 92%);
+    animation: nexus-codewave 24s ease-in-out infinite alternate;
+    will-change: background-position;
+}
+@keyframes nexus-codewave {
+    0%   { background-position: 0% 10%, 100% 90%, 40% 0%, 90% 10%, 0 0; }
+    50%  { background-position: 45% 50%, 55% 40%, 70% 70%, 50% 60%, 0 0; }
+    100% { background-position: 70% 30%, 30% 70%, 20% 90%, 10% 40%, 0 0; }
+}
+@media (prefers-reduced-motion: reduce) { .nexus-codewave { animation: none !important; } }
+
+/* Tune: the glyph field is a background texture, so it is dimmed and the hero
+   text is lifted above it with a dark halo -- the way the heading stays crisp
+   over the field on the Mantis home screen. */
+.nexus-codewave { opacity: 0.52; }
+.nexus-hero > :not(.nexus-codewave) { position: relative; z-index: 1; }
+.nexus-title { text-shadow: 0 1px 2px rgb(9 10 14 / 0.96), 0 3px 26px rgb(9 10 14 / 0.8); }
+.nexus-hero .nexus-sub { text-shadow: 0 1px 3px rgb(9 10 14 / 0.96), 0 1px 10px rgb(9 10 14 / 0.7); }
+.nexus-eyebrow { text-shadow: 0 1px 4px rgb(9 10 14 / 0.9); }
+.nexus-hero-pill { background: rgb(9 10 14 / 0.62) !important; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
+
+/* The blue now lives in the glyph field, so the title reads light over it (as
+   Mantis's white welcome text does). The keyword keeps a soft light-blue flow
+   -- bright enough to stay legible against the field -- and the sub is lifted. */
+.nexus-title-key {
+    /* background-image (not the background shorthand) so background-clip:text
+       from the live-blue block above is preserved -- the shorthand resets it. */
+    background-image: linear-gradient(100deg, #e3edff 0%, #b9d2ff 38%, #ccc2ff 66%, #e3edff 100%) !important;
+    background-size: 220% 100% !important;
+    -webkit-background-clip: text !important; background-clip: text !important;
+    -webkit-text-fill-color: transparent !important; color: transparent !important;
+}
+.nexus-hero .nexus-sub { color: #c4cde0 !important; }
+
+
+/* Make it read as waves: sine-wave bands clipped to the glyphs, scrolling
+   horizontally one seamless period. Replaces the drifting radial blooms. */
+.nexus-codewave {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='440' height='340' viewBox='0 0 440 340'%3E%3Cdefs%3E%3Cfilter id='b' x='-20%' y='-20%' width='140%' height='140%'%3E%3CfeGaussianBlur stdDeviation='9'/%3E%3C/filter%3E%3C/defs%3E%3Cg filter='url(%23b)' fill='none' stroke-linecap='round'%3E%3Cpath d='M0 95.0 L10 101.5 L20 108.0 L30 114.1 L40 119.9 L50 125.1 L60 129.8 L70 133.7 L80 136.8 L90 139.1 L100 140.5 L110 141.0 L120 140.5 L130 139.1 L140 136.8 L150 133.7 L160 129.8 L170 125.1 L180 119.9 L190 114.1 L200 108.0 L210 101.5 L220 95.0 L230 88.5 L240 82.0 L250 75.9 L260 70.1 L270 64.9 L280 60.2 L290 56.3 L300 53.2 L310 50.9 L320 49.5 L330 49.0 L340 49.5 L350 50.9 L360 53.2 L370 56.3 L380 60.2 L390 64.9 L400 70.1 L410 75.9 L420 82.0 L430 88.5 L440 95.0' stroke='%237cc0ff' stroke-width='30' opacity='0.95'/%3E%3Cpath d='M0 216.8 L10 212.0 L20 206.2 L30 199.5 L40 192.2 L50 184.3 L60 176.0 L70 167.5 L80 159.0 L90 150.5 L100 142.4 L110 134.7 L120 127.6 L130 121.3 L140 115.9 L150 111.5 L160 108.2 L170 106.0 L180 105.1 L190 105.3 L200 106.8 L210 109.4 L220 113.2 L230 118.0 L240 123.8 L250 130.5 L260 137.8 L270 145.7 L280 154.0 L290 162.5 L300 171.0 L310 179.5 L320 187.6 L330 195.3 L340 202.4 L350 208.7 L360 214.1 L370 218.5 L380 221.8 L390 224.0 L400 224.9 L410 224.7 L420 223.2 L430 220.6 L440 216.8' stroke='%234f8bff' stroke-width='34' opacity='0.9'/%3E%3Cpath d='M0 204.7 L10 201.3 L20 198.6 L30 196.6 L40 195.4 L50 195.0 L60 195.4 L70 196.6 L80 198.6 L90 201.4 L100 204.8 L110 208.9 L120 213.4 L130 218.4 L140 223.8 L150 229.4 L160 235.1 L170 240.8 L180 246.3 L190 251.7 L200 256.7 L210 261.2 L220 265.3 L230 268.7 L240 271.4 L250 273.4 L260 274.6 L270 275.0 L280 274.6 L290 273.4 L300 271.4 L310 268.6 L320 265.2 L330 261.1 L340 256.6 L350 251.6 L360 246.2 L370 240.6 L380 234.9 L390 229.2 L400 223.7 L410 218.3 L420 213.3 L430 208.8 L440 204.7' stroke='%2334d3ee' stroke-width='26' opacity='0.8'/%3E%3Cpath d='M0 328.8 L10 332.3 L20 334.9 L30 336.5 L40 337.0 L50 336.5 L60 334.9 L70 332.3 L80 328.7 L90 324.3 L100 319.0 L110 313.1 L120 306.6 L130 299.6 L140 292.4 L150 285.0 L160 277.6 L170 270.3 L180 263.4 L190 256.9 L200 250.9 L210 245.7 L220 241.2 L230 237.7 L240 235.1 L250 233.5 L260 233.0 L270 233.5 L280 235.1 L290 237.7 L300 241.3 L310 245.7 L320 251.0 L330 256.9 L340 263.4 L350 270.4 L360 277.6 L370 285.0 L380 292.4 L390 299.7 L400 306.6 L410 313.1 L420 319.1 L430 324.3 L440 328.8' stroke='%238b7bff' stroke-width='28' opacity='0.7'/%3E%3C/g%3E%3C/svg%3E"), linear-gradient(rgb(120 150 210 / 0.2), rgb(120 150 210 / 0.2)) !important;
+    background-size: 440px 340px, 100% 100% !important;
+    background-repeat: repeat-x, no-repeat !important;
+    background-position: 0 0, 0 0;
+    animation: nexus-wavescroll 15s linear infinite !important;
+}
+@keyframes nexus-wavescroll { from { background-position: 0 0, 0 0; } to { background-position: -440px 0, 0 0; } }
