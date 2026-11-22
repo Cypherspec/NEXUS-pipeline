@@ -261,11 +261,33 @@ class ViewBoundary extends React.Component<
     }
 }
 
+/**
+ * A dense field of faint glyphs for the hero background, after Mantis's home
+ * screen. The characters are static and seeded (so the field does not reshuffle
+ * on every render); the wave of brighter blue that flows through them is done
+ * in CSS, by clipping a set of drifting gradients to this text.
+ */
+const CODEWAVE_GLYPHS = '░▒▓│┤┼┐└┴┬├─◇◆<>/\\|=+*·:;xX0O#%&';
+function makeCodewave(rows = 30, cols = 180): string {
+    let seed = 0x1a2b3c;
+    const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+    const lines: string[] = [];
+    for (let r = 0; r < rows; r += 1) {
+        let line = '';
+        for (let c = 0; c < cols; c += 1) {
+            line += rnd() < 0.2 ? ' ' : CODEWAVE_GLYPHS[Math.floor(rnd() * CODEWAVE_GLYPHS.length)];
+        }
+        lines.push(line);
+    }
+    return lines.join('\n');
+}
+
 const NexusExtensionPanel: React.FC = () => {
     // Panels get no theme signal from the host, so dark is the panel's own
     // choice and matches the Mantis workspace it is docked into.
     const theme = nexusTheme(true);
     const fmt = useNumberFormat();
+    const codewave = useMemo(() => makeCodewave(), []);
 
     const [mode, setMode] = useState<Mode>('analyze');
     const [phase, setPhase] = useState<Phase>('idle');
@@ -651,6 +673,7 @@ const NexusExtensionPanel: React.FC = () => {
     return (
         <div className="nexus-root" style={{ background: theme.bg, color: theme.text }}>
             <header className="nexus-hero">
+                <div className="nexus-codewave" aria-hidden>{codewave}</div>
                 <div className="nexus-head">
                     <span className="nexus-eyebrow"><i />NEXUS</span>
                     <span className="nexus-hero-pill">
